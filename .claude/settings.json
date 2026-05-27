@@ -1,0 +1,18 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python scripts/qualify.py*)",
+      "Bash(python scripts/voice.py*)",
+      "Bash(python scripts/vault.py*)",
+      "Bash(python scripts/analytics.py*)",
+      "Bash(python scripts/scraper.py*)",
+      "Bash(git -C hephzibah-brain-temp status)",
+      "Bash(git -C hephzibah-brain-temp log*)",
+      "Bash(git -C hephzibah-brain-temp add .)",
+      "Bash(git -C hephzibah-brain-temp commit*)",
+      "Bash(git -C hephzibah-brain-temp pull*)",
+      "Bash(git -C hephzibah-brain-temp push*)",
+      "Bash(pip install*)"
+    ]
+  }
+}

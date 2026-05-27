@@ -1,0 +1,9 @@
+.env
+data/upwork_session.json
+data/*.db
+__pycache__/
+*.pyc
+.DS_Store
+sources/
+node_modules/
+hephzibah-brain-temp/
