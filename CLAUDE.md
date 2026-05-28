@@ -66,15 +66,31 @@ Every command that produces a significant output writes a dated markdown file to
 
 ```
 outputs/
-├── roasts/      ← /roast-proposal, profile roasts      → YYYY-MM-DD-profile-roast.md / YYYY-MM-DD-proposal-SLUG.md
-├── proposals/   ← /write-proposal final output          → YYYY-MM-DD-SLUG.md
-├── intel/       ← /job-qualify brief, /client-intel     → YYYY-MM-DD-job-SLUG.md / YYYY-MM-DD-client-SLUG.md
-├── strategy/    ← /strategy-review, /niche-radar        → YYYY-MM-DD-strategy-review.md
-└── briefs/      ← /daily-brief                          → YYYY-MM-DD-daily-brief.md
+├── roasts/      ← /roast-proposal, profile roasts
+├── proposals/   ← /write-proposal final output
+├── intel/       ← /job-qualify brief, /client-intel, /prep-call
+├── strategy/    ← /strategy-review, /niche-radar, /quote
+└── briefs/      ← /daily-brief
 ```
 
+**Naming convention (non-negotiable):**
+Slug = `[client-name]-[job-keyword]` — human readable, no Upwork IDs.
+The folder declares the type. The filename declares who and what.
+
+| Output | Filename pattern | Example |
+|---|---|---|
+| Job intel | `intel/YYYY-MM-DD-[client]-[job].md` | `intel/2026-05-28-eugen-5socials.md` |
+| Proposal | `proposals/YYYY-MM-DD-[client]-[job].md` | `proposals/2026-05-28-eugen-5socials.md` |
+| Call prep | `intel/YYYY-MM-DD-[client]-[job]-call-prep.md` | `intel/2026-05-28-eugen-5socials-call-prep.md` |
+| Client intel | `intel/YYYY-MM-DD-[client]-profile.md` | `intel/2026-05-28-eugen-profile.md` |
+| Profile audit | `roasts/YYYY-MM-DD-profile-audit.md` | `roasts/2026-05-28-profile-audit.md` |
+| Roast | `roasts/YYYY-MM-DD-[client]-[job]-roast.md` | `roasts/2026-05-28-eugen-5socials-roast.md` |
+| Strategy review | `strategy/YYYY-MM-DD-strategy-review.md` | `strategy/2026-05-28-strategy-review.md` |
+| Quote/SOW | `strategy/YYYY-MM-DD-[client]-[job]-quote.md` | `strategy/2026-05-28-eugen-5socials-quote.md` |
+| Daily brief | `briefs/YYYY-MM-DD-daily-brief.md` | `briefs/2026-05-28-daily-brief.md` |
+
 **Output rule (non-negotiable):**
-1. Write the full artifact to `outputs/[folder]/YYYY-MM-DD-[slug].md`
+1. Write the full artifact to `outputs/[folder]/YYYY-MM-DD-[client]-[slug].md`
 2. Append a summary to the relevant brain node
 3. Never leave significant output only in chat
 
