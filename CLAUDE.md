@@ -156,6 +156,15 @@ A personalized Loom video (60–90 seconds) attached to proposals scoring 75+ in
 **18. The client reading 70 proposals**
 Generic proposals are detectable in 3 words. Clients skim. One detail specific to their post signals you read it. Video breaks the text wall and makes you memorable. Short beats long when the short one shows understanding. Portfolio relevance > years of experience. The proposal gets them to click your profile; the profile closes the deal. Full breakdown in `concepts/upwork-psychology.md`.
 
+**19. The "www" filter — how to find context jobs**
+In Upwork Advanced Search, type `www` in the "Any of these words" field. This filters for job posts containing website URLs. These are the 20% of jobs that allow a full-audit Loom. They close at higher rates. Prioritize them.
+
+**20. Keyword saturation — how Ramshaw ranks #1 for N8N**
+Keywords go everywhere: profile title, overview, portfolio titles, portfolio descriptions, skills in each portfolio item, certifications, education, work history, and even job titles (ask clients to name contracts with your keyword). Use Ctrl+F on your profile to count keyword appearances. Spam keywords at the bottom of the overview. Full alignment between profile keywords and the jobs completed on the profile is what the algorithm rewards. One keyword cluster, deep — not broad.
+
+**21. The $15k close workflow — what happens after the reply**
+Ramshaw: "Act like a doctor." On the discovery call: brief rapport → "Tell me more about the project" → shut up and listen. The more they talk, the more they invest, the more likely they hire. Record the call with Fathom → get transcript → put into AI → build a Scope of Work PDF. Send the SOW with a split payment: ~40% upfront, ~30% at midpoint, ~30% on completion. When 60 people applied at $4-5k, he pitched $15k. He got it. Use Upwork's built-in scheduling or Zoom link — send ONE link, no back-and-forth on times.
+
 ---
 
 ## Commands — Full Reference
@@ -194,25 +203,39 @@ RATIONALE: [2 sentences. Honest. Challenge if needed.]
 
 ### `/write-proposal [job-file or job-url]`
 
+**The goal of a proposal is NOT to get hired. It is to get a reply. The close happens on the call.**
+
 **Pipeline (Claude Code is the engine — no external API calls):**
 
-**Step 0 — Job prep (mechanical arm):**
+**Step 0 — Classify Job Type (FIRST)**
+
+Does the job post contain: a website URL, social media links, or a Google-able business name?
+
+- **YES → Context Job.** Run full 6-pass pipeline below.
+- **NO → No-Context Job (80% of jobs).** Skip to Pass 6 only: generate the short "request for context" Loom script. No prose proposal. See `playbooks/loom-strategy.md`.
+
+To find context jobs proactively: Upwork Advanced Search → "Any of these words" → type `www`.
+
+**Step 1 — Job prep (mechanical arm):**
 ```
 python scripts/proposal_engine.py --prep --job "paste job description"
 python scripts/proposal_engine.py --prep --file sources/jobs/2026-05-28-slug.json
 ```
 This extracts budget, stack, red flags, green flags deterministically. Read the output as context.
 
-**Pass 1 — Intel:** Analyze job text. Extract: client pain, deliverable, budget signal, scope clarity, urgency, red flags.
+**Pass 1 — Intel:** Analyze job text + research their website/business. Extract: what is the specific gap, mistake, or opportunity visible from their site? Not general pain — a specific finding.
 
 **Pass 2 — Psychology:** Client archetype, real fear (not what the post says), what they need to believe to hire.
 
-**Pass 3 — Strategy:** Diagnosis frame (the specific insight that shows you already understand the real problem), proof point to use, closing question.
+**Pass 3 — Strategy:** The specific observation to lead with (found from their site), proof point to use, closing question.
 
 **Pass 4 — Draft:** Write the proposal. Hard constraints:
 - 150-250 words (no exceptions)
 - First line starts with THEIR situation (not "I" or "Hi")
-- Structure: Hook + Diagnosis (2-3 lines) + Proof (1-2 lines) + Question (1 line)
+- Structure: Opener (1 sentence, specific) + Bullet observations (3-4, scannable) + Loom link + Low-friction question
+- Closing question must be answerable in 10 seconds: yes/no, a number, or a date
+- NO: "What's your big vision?" (too much cognitive load)
+- YES: "Is this live yet or still in planning?" / "Roughly how many leads/month?" / "Would Tuesday work for a call?"
 - NO hyphens in compound words (write "real time" not "real-time")
 - Voice: direct, confident, slightly senior. Not eager. Not formal.
 - BANNED: passionate about, would be delighted, leverage, synergy, as per your requirements, hope to hear from you
@@ -223,23 +246,38 @@ python scripts/proposal_engine.py --check "draft text here"
 ```
 Fix all flagged issues. Revise until clean.
 
-**Pass 6 — Loom Script (required for jobs scoring 75+):**
-Generate a 60–90 second recording script following this exact structure:
-```
-[0:00–0:08] Hook — Their situation (NOT "Hi I'm Emmanuel")
-[0:08–0:22] Reframe — The real problem behind the stated problem
-[0:22–0:55] Solution sketch — Walk through the architecture on screen (draw it live)
-[0:55–1:10] One proof point — Specific result from a similar project
-[1:10–1:20] CTA — The same sharp question from the written proposal
-```
-Full Loom methodology in `playbooks/loom-strategy.md`.
+**Pass 6 — Loom Script:**
 
-**Loom link placement:** Paste the link as the FIRST LINE of the written proposal, above all text:
+For **context jobs** (full audit, 60-90 sec):
 ```
-[Loom link] — Quick walkthrough of how I'd approach this (90 sec)
+[0:00–0:08] Open on their website/job post on screen
+            "I was looking at your [site/post]..." — start with their situation
+[0:08–0:40] Show the specific finding you identified in Pass 3
+            Point at the actual thing. Name the specific issue.
+[0:40–1:00] Show one relevant portfolio item from Emmanuel's work
+[1:00–1:15] Low-friction closing question (same as written proposal)
+```
 
-[written proposal text below]
+For **no-context jobs** (request for context, under 45 sec):
 ```
+"Hey, I really want to help but there isn't enough context in this post for me
+to give you a full audit. If you can send your website or social links, I'll do
+that for you. Where are you from, by the way? I can see you're in [country]."
+```
+
+**Loom text wrapper (the ENTIRE written proposal around the Loom):**
+```
+Hey [client name],
+
+I made you a personalized Loom. Check it out: [link]
+
+P.S. [One personalized line — where they're from, something specific from their post]
+```
+The Loom is the proposal. Do NOT wrap it in paragraphs of text.
+
+**Finding the client's name:** Go to their reviews section, read the first lines of freelancer-to-client reviews — freelancers address the client by name.
+
+Full Loom methodology: `playbooks/loom-strategy.md`
 
 **Output:** Save proposal + Loom script to `outputs/proposals/YYYY-MM-DD-slug.md` using Write tool.
 
