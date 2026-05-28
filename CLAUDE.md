@@ -147,6 +147,15 @@ If <30% of submitted proposals are being opened by clients, the problem is NOT t
 **15. Upwork is a closed platform — don't try to go around it**
 Clients don't share contact info on Upwork and the platform actively prevents it. Research focus should be on niche/market intelligence and positioning — not finding clients externally. Everything happens on-platform.
 
+**16. Niche dominance > generalist reach**
+Ramshaw ranked #1 for "N8N" on Upwork by depth, not breadth. One tool, many portfolio pieces, keyword-optimized title, reviews that mention the keyword. The algorithm rewards specialization. Every portfolio item Emmanuel adds should reinforce one specific keyword cluster. Do not scatter across unrelated categories. Deep beats wide at every stage of growth.
+
+**17. Loom video is non-negotiable on priority bids**
+A personalized Loom video (60–90 seconds) attached to proposals scoring 75+ increases reply rate significantly. Every freelancer sends text. Video creates immediate pattern interruption. Records once, shows thinking, builds trust faster than paragraphs. Full methodology in `playbooks/loom-strategy.md`. Pass 6 of the proposal pipeline. Skip it on low-score jobs; never skip it on priority bids.
+
+**18. The client reading 70 proposals**
+Generic proposals are detectable in 3 words. Clients skim. One detail specific to their post signals you read it. Video breaks the text wall and makes you memorable. Short beats long when the short one shows understanding. Portfolio relevance > years of experience. The proposal gets them to click your profile; the profile closes the deal. Full breakdown in `concepts/upwork-psychology.md`.
+
 ---
 
 ## Commands — Full Reference
@@ -214,7 +223,23 @@ python scripts/proposal_engine.py --check "draft text here"
 ```
 Fix all flagged issues. Revise until clean.
 
-**Pass 6 — Loom Script:** Generate 60-90 sec recording script with time markers (hook, problem, solution, proof, CTA).
+**Pass 6 — Loom Script (required for jobs scoring 75+):**
+Generate a 60–90 second recording script following this exact structure:
+```
+[0:00–0:08] Hook — Their situation (NOT "Hi I'm Emmanuel")
+[0:08–0:22] Reframe — The real problem behind the stated problem
+[0:22–0:55] Solution sketch — Walk through the architecture on screen (draw it live)
+[0:55–1:10] One proof point — Specific result from a similar project
+[1:10–1:20] CTA — The same sharp question from the written proposal
+```
+Full Loom methodology in `playbooks/loom-strategy.md`.
+
+**Loom link placement:** Paste the link as the FIRST LINE of the written proposal, above all text:
+```
+[Loom link] — Quick walkthrough of how I'd approach this (90 sec)
+
+[written proposal text below]
+```
 
 **Output:** Save proposal + Loom script to `outputs/proposals/YYYY-MM-DD-slug.md` using Write tool.
 
