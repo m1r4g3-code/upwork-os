@@ -393,6 +393,66 @@ Full intel card before writing.
 
 ---
 
+### `/prep-call [job-file or client-name or context]`
+**When to run:** The moment a client replies, accepts an invite, or books a call. Run this before every discovery meeting.
+
+**What you do:**
+1. Read the job card or proposal file for context (frontmatter + body)
+2. Read the client node in `upwork/clients/active/` if it exists
+3. Research their website, business, and Upwork history using available data
+4. Identify the **kill shot** — one specific observation from their site or post to open with on the call
+5. Generate a pre-call brief using `python scripts/call_prep.py` with the confirmed project type and complexity:
+   ```
+   python scripts/call_prep.py --project "CRM Automation" --client "Alex" \
+     --type crm --complexity complex --context "Shopify store, 3 staff, manual CSV exports" \
+     --notes "wants to auto-sync orders to Airtable" --slug crm-alex
+   ```
+6. Augment the brief with:
+   - The specific kill shot observation (fill in the placeholder)
+   - Any archetype match from `playbooks/client-types.md`
+   - Flagged red flags from the job card that may surface on the call
+7. Save to `outputs/intel/YYYY-MM-DD-call-prep-SLUG.md`
+
+**Output format:**
+```
+PRE-CALL BRIEF: [Project]
+Client: [name] | Type: [proj_type] | Complexity: [level]
+
+WHAT WE KNOW
+  [hard facts from job card + client history]
+
+THE KILL SHOT (open with this)
+  [specific observation from research -- one line, pointed]
+  Opening: "[exact words to say in first 60 seconds]"
+
+RESEARCH GAPS (fill before the call)
+  [checklist of what to verify in the 15 min before]
+
+QUESTION STACK (8 questions, ordered by call phase)
+  [Current State] ...
+  [Problem Depth] ...
+  [Stakes] ...
+  [Technical] ...
+  [Decision] ...
+
+RED FLAGS TO LISTEN FOR
+  [signals from the call that change the strategy]
+
+CLOSE SCRIPT
+  [exact words to end the call with a concrete next step]
+
+POST-CALL ACTIONS
+  [checklist -- numbers to log, SOW timing, client node creation]
+```
+
+**The frame Emmanuel holds on every call:**
+He is the doctor. The client is describing symptoms. His job is to find the actual disease —
+then decide if he wants to treat it. Not to impress. Not to pitch. To diagnose.
+
+Full call methodology: `playbooks/discovery-call.md`
+
+---
+
 ### `/log-outcome [proposal-file] [won|lost|ghosted|replied]`
 **What you do:**
 1. Update proposal frontmatter: status, outcome, reply_hours (if known)
