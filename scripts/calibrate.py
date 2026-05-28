@@ -1,5 +1,5 @@
 """
-calibrate.py — Scoring calibration tool.
+calibrate.py -- Scoring calibration tool.
 
 Shows machine scores vs. Emmanuel's gut scores side by side.
 After 10+ calibrations, prints weight adjustment recommendations.
@@ -153,9 +153,9 @@ def calibration_report() -> None:
     if abs_avg <= 10:
         print(f"Accuracy: GOOD (within 10 pts on average)")
     elif abs_avg <= 20:
-        print(f"Accuracy: FAIR (within 20 pts — keep calibrating)")
+        print(f"Accuracy: FAIR (within 20 pts -- keep calibrating)")
     else:
-        print(f"Accuracy: NEEDS WORK (>{abs_avg:.0f} pts off — adjust weights)")
+        print(f"Accuracy: NEEDS WORK (>{abs_avg:.0f} pts off -- adjust weights)")
 
     print(f"\nRECENT CALIBRATIONS:")
     print(f"{'Title':<40} {'Machine':>8} {'Gut':>6} {'Delta':>7}")
@@ -187,6 +187,10 @@ if __name__ == "__main__":
 
     if "--report" in args:
         calibration_report()
+    elif "--adjust" in args:
+        print("ERROR: --adjust is not yet implemented.", file=sys.stderr)
+        print("Review the --report output and manually adjust weights in qualify.py.", file=sys.stderr)
+        sys.exit(1)
     else:
         run_calibration_session()
         if load_calibration_log():

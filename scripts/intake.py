@@ -1,5 +1,5 @@
 """
-intake.py — Job intake processor.
+intake.py -- Job intake processor.
 
 Takes raw job text (pasted from Upwork) + manual client stats,
 structures it as JSON, runs qualify.py, and creates a job card in the brain.
@@ -12,7 +12,7 @@ Usage:
   python scripts/intake.py --json sources/jobs/x.json # already structured
 
 Output:
-  1. sources/jobs/YYYY-MM-DD-<slug>.json  (raw data — immutable)
+  1. sources/jobs/YYYY-MM-DD-<slug>.json  (raw data -- immutable)
   2. hephzibah-brain-temp/upwork/jobs/archive/YYYY-MM-DD-<slug>.md  (job card)
   3. Prints score + bid/skip decision
 """
@@ -59,7 +59,7 @@ def gather_job_data_interactive() -> dict:
         lines.append(line)
     data["job"]["description"] = "\n".join(lines)
 
-    jtype = input("Job type — fixed or hourly? [f/h]: ").strip().lower()
+    jtype = input("Job type -- fixed or hourly? [f/h]: ").strip().lower()
     if jtype == "h":
         data["job"]["job_type"] = "hourly"
         rate = input("Hourly rate range (e.g. 25-75): ").strip()
@@ -126,16 +126,22 @@ def create_job_card(data: dict, scores: dict, slug: str) -> Path:
     disqualifiers = scores.get("hard_disqualifiers", [])
     client_red_flags = scores.get("client_red_flags", [])
     all_red_flags = disqualifiers + client_red_flags
+    sr = scores.get("score_reasons", {})
+    jq_rationale = "; ".join(sr.get("job_quality", [])[:2])
+    cq_rationale = "; ".join(sr.get("client_quality", [])[:2])
+    fit_rationale = "; ".join(sr.get("fit", [])[:2])
+    urgency_rationale = "; ".join(sr.get("urgency", [])[:1])
+    competition_rationale = "; ".join(sr.get("competition", [])[:1])
 
     budget_str = ""
     if job.get("job_type") == "hourly":
         lo = job.get("hourly_rate_min", 0)
         hi = job.get("hourly_rate_max", 0)
-        budget_str = f"${lo}–${hi}/hr" if hi else f"${lo}/hr"
+        budget_str = f"${lo}-${hi}/hr" if hi else f"${lo}/hr"
     else:
         lo = job.get("budget_min", 0)
         hi = job.get("budget_max", 0)
-        budget_str = f"${lo:,}–${hi:,}" if hi and hi != lo else f"${lo:,}"
+        budget_str = f"${lo:,}-${hi:,}" if hi and hi != lo else f"${lo:,}"
 
     frontmatter = f"""---
 sensitivity: private
@@ -176,9 +182,9 @@ forced_bid: false
     body = f"""
 # {job.get('title', 'Untitled Job')}
 
-**URL:** {job.get('url', '—')}
-**Client:** {client.get('username', '—')} | {client.get('country', '—')} | ${client.get('total_spend_usd', 0):,.0f} spent | {client.get('hire_rate_pct', 0):.0f}% hire rate | {client.get('avg_review_score', 0)}★
-**Budget:** {budget_str} | {job.get('job_type', '—')}
+**URL:** {job.get('url', '--')}
+**Client:** {client.get('username', '--')} | {client.get('country', '--')} | ${client.get('total_spend_usd', 0):,.0f} spent | {client.get('hire_rate_pct', 0):.0f}% hire rate | {client.get('avg_review_score', 0)}★
+**Budget:** {budget_str} | {job.get('job_type', '--')}
 **Competing proposals:** {job.get('proposals_count', 0)}
 
 ---
@@ -193,11 +199,11 @@ forced_bid: false
 
 | Factor | Score | Rationale |
 |---|---|---|
-| Job quality | {jq} | |
-| Client quality | {cq} | |
-| Fit score | {fit} | |
-| Urgency | {urgency}/10 | |
-| Competition | {competition}/10 | |
+| Job quality | {jq} | {jq_rationale} |
+| Client quality | {cq} | {cq_rationale} |
+| Fit score | {fit} | {fit_rationale} |
+| Urgency | {urgency}/10 | {urgency_rationale} |
+| Competition | {competition}/10 | {competition_rationale} |
 | **Composite** | **{composite}** | |
 
 ---
@@ -222,7 +228,7 @@ forced_bid: false
 
 ## Proposal Notes
 
-[Key points to hit — diagnosis frame, proof to use, question to ask]
+[Key points to hit -- diagnosis frame, proof to use, question to ask]
 """
 
     card_path.write_text(frontmatter + body, encoding="utf-8")
@@ -272,7 +278,7 @@ def print_summary(scores: dict, card_path: Path) -> None:
     if decision == "BID":
         print(f"\nNEXT: run /write-proposal {card_path.name}")
     elif decision == "WATCHLIST":
-        print(f"\nNEXT: monitor — re-evaluate if niche fit strengthens")
+        print(f"\nNEXT: monitor -- re-evaluate if niche fit strengthens")
     else:
         print(f"\nSKIP. Connects saved.")
     print()
@@ -297,6 +303,12 @@ if __name__ == "__main__":
 
     slug = slugify(data["job"].get("title", "job"), date_str)
     json_path = SOURCES / f"{slug}.json"
+    counter = 1
+    while json_path.exists():
+        json_path = SOURCES / f"{slug}-{counter}.json"
+        counter += 1
+    if counter > 1:
+        slug = f"{slug}-{counter - 1}"
     with open(json_path, "w") as f:
         json.dump(data, f, indent=2)
 

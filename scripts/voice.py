@@ -1,5 +1,5 @@
 """
-voice.py — Proposal voice calibration engine.
+voice.py -- Proposal voice calibration engine.
 
 Scores a proposal draft against Emmanuel's voice guide.
 Detects AI-smell phrases, checks structure, validates length.
@@ -98,16 +98,16 @@ def score_hook(text: str) -> tuple[int, list[str]]:
 
     if first_line.startswith("i ") or first_line.startswith("hi,") or first_line.startswith("hello"):
         score -= 4
-        issues.append("First word is 'I', 'Hi', or 'Hello' — starts with you, not them")
+        issues.append("First word is 'I', 'Hi', or 'Hello' -- starts with you, not them")
 
     if any(phrase in first_line for phrase in ["i'm excited", "i am excited", "i came across",
                                                 "i would like", "i'm interested", "i saw your"]):
         score -= 3
-        issues.append("Generic opening — sounds like every other proposal")
+        issues.append("Generic opening -- sounds like every other proposal")
 
     if len(lines[0]) > 200:
         score -= 1
-        issues.append("Hook is too long — should be one punchy sentence")
+        issues.append("Hook is too long -- should be one punchy sentence")
 
     if "?" in lines[0]:
         score += 1
@@ -169,12 +169,12 @@ def score_voice(text: str) -> tuple[int, list[str], list[str]]:
         good_signals.append("One sharp question (good CTA structure)")
     elif question_count == 0:
         score -= 1
-        issues.append("No question — proposal doesn't open a conversation")
+        issues.append("No question -- proposal doesn't open a conversation")
     elif question_count > 2:
         score -= 1
-        issues.append(f"{question_count} questions — too many, overwhelms the client")
+        issues.append(f"{question_count} questions -- too many, overwhelms the client")
 
-    return max(1, min(10, int(score))), issues, good_signals
+    return max(1, min(10, round(score))), issues, good_signals
 
 
 def score_diagnosis(text: str) -> tuple[int, list[str]]:
@@ -207,7 +207,7 @@ def score_diagnosis(text: str) -> tuple[int, list[str]]:
     found_generic = [g for g in generic_signals if g in text_lower]
     if len(found_generic) >= 2:
         score -= 2
-        issues.append("Mostly capability-claiming, not diagnosing — '{}' etc.".format(found_generic[0]))
+        issues.append("Mostly capability-claiming, not diagnosing -- '{}' etc.".format(found_generic[0]))
 
     # Specificity
     if re.search(r'\d+', text):
@@ -248,7 +248,7 @@ def score_cta(text: str) -> tuple[int, list[str]]:
         "don't hesitate to contact", "available for a call", "happy to discuss further"
     ]):
         score -= 4
-        issues.append(f"Weak CTA: '{lines[-1]}' — this is a plea, not a conversation opener")
+        issues.append(f"Weak CTA: '{lines[-1]}' -- this is a plea, not a conversation opener")
 
     if "?" in last_line:
         score += 3
@@ -256,12 +256,12 @@ def score_cta(text: str) -> tuple[int, list[str]]:
             issues.append("Good: ends with a specific question")
     elif "?" not in text[-200:]:
         score -= 2
-        issues.append("No question near the end — proposal doesn't open a conversation")
+        issues.append("No question near the end -- proposal doesn't open a conversation")
 
     generic_ctas = ["when can we start", "what are your thoughts", "let me know what you think"]
     if any(g in last_line for g in generic_ctas):
         score -= 1
-        issues.append("CTA question is generic — make it specific to their situation")
+        issues.append("CTA question is generic -- make it specific to their situation")
 
     return max(1, min(10, score)), issues
 
@@ -274,7 +274,7 @@ def analyze_proposal(text: str) -> dict:
     length_score, length_issues = score_length(text)
     cta_score, cta_issues = score_cta(text)
 
-    overall = int((hook_score * 0.20 + voice_score * 0.35 + diag_score * 0.25 + cta_score * 0.20))
+    overall = round(hook_score * 0.15 + voice_score * 0.30 + diag_score * 0.25 + length_score * 0.10 + cta_score * 0.20)
     word_count = len(text.split())
 
     return {
@@ -304,7 +304,7 @@ def print_report(report: dict) -> None:
     status = "SEND READY [OK]" if report["send_ready"] else "NEEDS REVISION [FIX]"
 
     print(f"\n{'='*50}")
-    print(f"VOICE SCORE: {overall}/10 — {status}")
+    print(f"VOICE SCORE: {overall}/10 -- {status}")
     print(f"Word count: {report['word_count']} (target: 150-250)")
     print(f"{'='*50}")
 

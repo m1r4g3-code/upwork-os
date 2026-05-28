@@ -60,6 +60,36 @@ hephzibah-brain-temp/
 
 ---
 
+## Outputs — Generated Artifacts
+
+Every command that produces a significant output writes a dated markdown file to `outputs/`. This is separate from the brain — it is the human-readable artifact Emmanuel can open and read at any time.
+
+```
+outputs/
+├── roasts/      ← /roast-proposal, profile roasts      → YYYY-MM-DD-profile-roast.md / YYYY-MM-DD-proposal-SLUG.md
+├── proposals/   ← /write-proposal final output          → YYYY-MM-DD-SLUG.md
+├── intel/       ← /job-qualify brief, /client-intel     → YYYY-MM-DD-job-SLUG.md / YYYY-MM-DD-client-SLUG.md
+├── strategy/    ← /strategy-review, /niche-radar        → YYYY-MM-DD-strategy-review.md
+└── briefs/      ← /daily-brief                          → YYYY-MM-DD-daily-brief.md
+```
+
+**Output rule (non-negotiable):**
+1. Write the full artifact to `outputs/[folder]/YYYY-MM-DD-[slug].md`
+2. Append a summary to the relevant brain node
+3. Never leave significant output only in chat
+
+**Output file header format:**
+```markdown
+# [Output Type] — [Title]
+**Date:** YYYY-MM-DD
+**Command:** /command-name
+**Status:** [draft|final|outcome-logged]
+---
+[content]
+```
+
+---
+
 ## Operating Principles — The Ryan Ramshaw Model
 
 These are not suggestions. They are constraints.
@@ -102,6 +132,21 @@ Emmanuel has documented `[[financial-fragility]]` as a personal challenge. When 
 **10. The middleman lesson**
 No work without signed contract and 50% deposit upfront. Flag any client who resists this. Walk away from any engagement that skips this step.
 
+**11. Proposal timing is a ranking signal**
+The algorithm gives a 5–10 percentage point reply rate boost to proposals submitted within 15–60 minutes of posting. Set job alerts. Bid fast on high-score jobs. The first 2 hours is the highest-ROI window.
+
+**12. Never end a contract yourself**
+Freelancer-initiated contract endings register as JSS negatives regardless of the reason. Always let the client close. When work is done and client goes silent: *"Everything is wrapped up on my end. Could you close the contract when you get a chance?"*
+
+**13. The private NPS trap**
+After every contract, Upwork sends clients a private satisfaction survey you never see. Score 7 = "Passive" — actively suppresses your ranking even if their public review is 5 stars. Manage client relationship temperature before close. Deliver a small unexpected extra. Send a delivery summary. Engineer 9–10s, not 7s.
+
+**14. Proposal View Rate is the real diagnostic**
+If <30% of submitted proposals are being opened by clients, the problem is NOT the proposal text — it is profile-level algorithm suppression (JSS, category scatter, keyword mismatch). Fix the profile first, then the proposals.
+
+**15. Upwork is a closed platform — don't try to go around it**
+Clients don't share contact info on Upwork and the platform actively prevents it. Research focus should be on niche/market intelligence and positioning — not finding clients externally. Everything happens on-platform.
+
 ---
 
 ## Commands — Full Reference
@@ -139,24 +184,39 @@ RATIONALE: [2 sentences. Honest. Challenge if needed.]
 ---
 
 ### `/write-proposal [job-file or job-url]`
-**The 5-pass pipeline:**
 
-**Pass 1 — Research:** Pull job card from brain or run /job-qualify first. Scrape client profile if not already scored.
+**Pipeline (Claude Code is the engine — no external API calls):**
 
-**Pass 2 — Psychology:** What type of client is this? (refer to `upwork/playbooks/client-types.md`). What is their actual fear? What happened that made them post this job? What do they need to believe to hire?
+**Step 0 — Job prep (mechanical arm):**
+```
+python scripts/proposal_engine.py --prep --job "paste job description"
+python scripts/proposal_engine.py --prep --file sources/jobs/2026-05-28-slug.json
+```
+This extracts budget, stack, red flags, green flags deterministically. Read the output as context.
 
-**Pass 3 — Strategy:** What's the diagnosis frame? What specific thing about their situation do you name that shows you actually read and thought? What's the one piece of proof to include? What's the conversation-opening question?
+**Pass 1 — Intel:** Analyze job text. Extract: client pain, deliverable, budget signal, scope clarity, urgency, red flags.
 
-**Pass 4 — Draft:** Write the proposal. Constraints:
-- 150–250 words (no exceptions)
-- First line is the hook — not "Hi, I'm Emmanuel"
-- Structure: Hook → Diagnosis (2-3 lines) → Proof (1-2 lines) → Question (1 line)
+**Pass 2 — Psychology:** Client archetype, real fear (not what the post says), what they need to believe to hire.
+
+**Pass 3 — Strategy:** Diagnosis frame (the specific insight that shows you already understand the real problem), proof point to use, closing question.
+
+**Pass 4 — Draft:** Write the proposal. Hard constraints:
+- 150-250 words (no exceptions)
+- First line starts with THEIR situation (not "I" or "Hi")
+- Structure: Hook + Diagnosis (2-3 lines) + Proof (1-2 lines) + Question (1 line)
+- NO hyphens in compound words (write "real time" not "real-time")
 - Voice: direct, confident, slightly senior. Not eager. Not formal.
-- Never: "I am passionate about", "I would be delighted", "leverage", "synergy", "as per your requirements", "hope to hear from you soon"
+- BANNED: passionate about, would be delighted, leverage, synergy, as per your requirements, hope to hear from you
 
-**Pass 5 — Voice Check:** Call `python scripts/voice.py [draft-text]`. Score must be ≥7. If below 7, revise and recheck.
+**Pass 5 — Voice Check:**
+```
+python scripts/proposal_engine.py --check "draft text here"
+```
+Fix all flagged issues. Revise until clean.
 
-**Output:** Final proposal ready to copy-paste. Voice score. 1-line note on what makes this proposal work.
+**Pass 6 — Loom Script:** Generate 60-90 sec recording script with time markers (hook, problem, solution, proof, CTA).
+
+**Output:** Save proposal + Loom script to `outputs/proposals/YYYY-MM-DD-slug.md` using Write tool.
 
 ---
 
@@ -281,6 +341,56 @@ Weekly OS health check.
    - Case study opportunities from recent wins
    - 2-3 content ideas for LinkedIn/Upwork portfolio
    - Review engineering note (if recent win — how to ask for a great review)
+
+---
+
+### `/profile-audit`
+**What you do:**
+Run a deep algorithmic profile audit weighted by Upwork's ranking signals.
+
+1. Call `python scripts/profile_audit.py` (reads brain nodes automatically)
+2. Optionally pass current profile data: `python scripts/profile_audit.py --profile '{"title": "...", "overview": "...", "rate": 45}'`
+3. For a single section: `python scripts/profile_audit.py --section title`
+4. Output: weighted score across 7 sections + exact text recommendations + priority action list
+5. Save output to `outputs/roasts/YYYY-MM-DD-profile-audit.md`
+
+**Sections audited (by algorithm weight):**
+- JSS (30%) — new account guidance, badge threshold tracking
+- Title (20%) — keyword format, niche specificity, exact recommended text
+- Overview (18%) — Ramshaw formula, AI-slop detection, hook quality
+- Portfolio (15%) — specific items to build, Loom video priority
+- Skills (10%) — tier breakdown, exact 20-skill list
+- Rate (4%) — market positioning, path to premium
+- Completeness (3%) — full checklist including education framing
+
+**Output format:** Priority-ordered action list. Exact text to use. Not generic advice.
+
+**When to run:** Before sending a proposal batch, after adding new portfolio items, weekly while building JSS.
+
+---
+
+### `/project-radar`
+**What you do:**
+Surface the highest-ROI portfolio projects to build next, ranked by market demand and portfolio gap.
+
+1. Call `python scripts/project_radar.py` for full radar
+2. With filters:
+   - `python scripts/project_radar.py --top 5` — top 5 only
+   - `python scripts/project_radar.py --niche automation` — AI automation only
+   - `python scripts/project_radar.py --niche fullstack` — full-stack only
+   - `python scripts/project_radar.py --max-hours 12` — quick builds only
+3. Output: ranked project list + build specs + Loom scripts + Upwork portfolio headlines
+4. Save output to `outputs/strategy/YYYY-MM-DD-project-radar.md`
+
+**Composite scoring:** Market Demand 35% + Proof Power 30% + Uniqueness 20% + Time ROI 15%
+
+**Each project includes:**
+- Full build spec (what to code, what to name the repo, README notes)
+- 60-second Loom video script (hook → problem → solution → result → CTA)
+- Upwork portfolio headline (copy-paste ready)
+- Upwork search terms the project attracts
+
+**When to run:** When deciding what to build next, when portfolio feels thin for a specific niche, before applying to a new category.
 
 ---
 

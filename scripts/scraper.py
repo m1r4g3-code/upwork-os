@@ -1,5 +1,5 @@
 """
-scraper.py — Upwork job and client scraper (Playwright).
+scraper.py -- Upwork job and client scraper (Playwright).
 
 Scrapes job pages and client profiles into structured JSON for qualify.py.
 
@@ -39,21 +39,20 @@ def slug_from_url(url: str) -> str:
 def manual_input_mode() -> dict:
     """Fallback: prompt for manual job data entry."""
     print("MANUAL JOB ENTRY MODE")
-    print("(Scraper unavailable — enter job details manually)")
+    print("(Scraper unavailable -- enter job details manually)")
     print()
 
     data = {"job": {}, "client": {}}
     data["job"]["title"] = input("Job title: ").strip()
     data["job"]["url"] = input("Job URL: ").strip()
-    data["job"]["description"] = input("Paste job description (press Enter twice when done):\n")
-    # Read until double newline
+    print("Paste job description (type END on its own line when done):")
     lines = []
     while True:
         line = input()
-        if line == "" and lines and lines[-1] == "":
+        if line.strip().upper() == "END":
             break
         lines.append(line)
-    data["job"]["description"] = "\n".join(lines[:-1])
+    data["job"]["description"] = "\n".join(lines)
 
     budget_input = input("Budget (e.g. '$500-1000 fixed' or '$25-50/hr'): ").strip()
     if "/hr" in budget_input.lower():
@@ -91,6 +90,24 @@ def manual_input_mode() -> dict:
     return data
 
 
+def _gather_client_manual(username: str) -> dict:
+    """Prompt for client stats from the profile page sidebar."""
+    print(f"\nEnter client stats for '{username}' from the Upwork profile sidebar:")
+    client = {"username": username}
+    client["country"] = input("Country: ").strip()
+    pay_verified = input("Payment verified? [y/n]: ").strip().lower()
+    client["payment_verified"] = pay_verified == "y"
+    spend = input("Total spent (e.g. 5000, or 0): ").strip()
+    client["total_spend_usd"] = float(re.sub(r'[,$]', '', spend) or "0")
+    client["hire_rate_pct"] = float(input("Hire rate % (e.g. 45): ").strip() or "0")
+    client["avg_hourly_paid"] = float(input("Avg hourly paid to freelancers (0 if unknown): ").strip() or "0")
+    client["avg_review_score"] = float(input("Avg review score 1-5 (0 if no reviews): ").strip() or "0")
+    client["active_contracts"] = int(input("Active contracts [0]: ").strip() or "0")
+    client["total_hires"] = int(input("Total hires [0]: ").strip() or "0")
+    client["jobs_posted"] = int(input("Jobs posted [0]: ").strip() or "0")
+    return client
+
+
 def scrape_with_playwright(url: str, mode: str = "job") -> dict:
     """
     Playwright-based scraper. Requires:
@@ -113,7 +130,7 @@ def scrape_with_playwright(url: str, mode: str = "job") -> dict:
     data = {"job": {}, "client": {}}
 
     with sync_playwright() as p:
-        browser = p.chromium.launch(headless=True)
+        browser = p.chromium.launch(headless=False)
         context = browser.new_context()
 
         # Load saved session
@@ -168,10 +185,8 @@ def scrape_with_playwright(url: str, mode: str = "job") -> dict:
             profile_url = f"https://www.upwork.com/companies/{url}" if not url.startswith("http") else url
             page.goto(profile_url, wait_until="networkidle", timeout=30000)
             page.wait_for_timeout(2000)
-            data["client"]["username"] = url
-            # Client profile scraping is Upwork-version-dependent
-            # Fallback: manual entry for client data
-            print("NOTE: Client profile scraping requires manual verification. Switching to manual for client data.", file=sys.stderr)
+            print("Profile page loaded. Enter client stats from the sidebar.", file=sys.stderr)
+            data["client"] = _gather_client_manual(url)
 
         browser.close()
 
@@ -179,7 +194,7 @@ def scrape_with_playwright(url: str, mode: str = "job") -> dict:
 
 
 def setup_session() -> None:
-    """Interactive session setup — opens browser for manual login."""
+    """Interactive session setup -- opens browser for manual login."""
     try:
         from playwright.sync_api import sync_playwright
     except ImportError:

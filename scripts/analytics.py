@@ -1,5 +1,5 @@
 """
-analytics.py — Proposal performance analytics.
+analytics.py -- Proposal performance analytics.
 
 Queries the proposals database and generates performance reports.
 Called by /strategy-review and /daily-brief commands.
@@ -16,12 +16,14 @@ import sys
 import json
 import sqlite3
 from pathlib import Path
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, date as date_type
 
 ROOT = Path(__file__).parent.parent
 DATA_DIR = ROOT / "data"
 DATA_DIR.mkdir(exist_ok=True)
 DB_PATH = DATA_DIR / "proposals.db"
+
+SCHEMA_VERSION = 2
 
 
 def get_conn() -> sqlite3.Connection:
@@ -30,10 +32,31 @@ def get_conn() -> sqlite3.Connection:
     return conn
 
 
+def _apply_migrations(conn: sqlite3.Connection, from_version: int) -> None:
+    """Apply schema migrations from from_version to SCHEMA_VERSION."""
+    if from_version < 2:
+        # v1 -> v2: add indexes for common query patterns
+        conn.executescript("""
+        CREATE INDEX IF NOT EXISTS idx_proposals_sent_date ON proposals (sent_date);
+        CREATE INDEX IF NOT EXISTS idx_proposals_status ON proposals (status);
+        CREATE INDEX IF NOT EXISTS idx_proposals_niche ON proposals (niche);
+        """)
+        conn.execute(
+            "INSERT INTO schema_version (version, applied_at) VALUES (?, ?)",
+            (2, datetime.now().isoformat()),
+        )
+        print("Schema migrated to v2: added indexes")
+
+
 def init_db() -> None:
-    """Create database tables."""
+    """Create database tables and apply any pending migrations."""
     with get_conn() as conn:
         conn.executescript("""
+        CREATE TABLE IF NOT EXISTS schema_version (
+            version INTEGER NOT NULL,
+            applied_at TEXT NOT NULL
+        );
+
         CREATE TABLE IF NOT EXISTS proposals (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             slug TEXT UNIQUE NOT NULL,
@@ -86,7 +109,23 @@ def init_db() -> None:
             delta INTEGER
         );
         """)
-    print(f"Database initialized: {DB_PATH}")
+
+        row = conn.execute("SELECT MAX(version) as v FROM schema_version").fetchone()
+        current_version = row["v"]
+        if current_version is None:
+            # Fresh database -- seed indexes and record version
+            conn.executescript("""
+            CREATE INDEX IF NOT EXISTS idx_proposals_sent_date ON proposals (sent_date);
+            CREATE INDEX IF NOT EXISTS idx_proposals_status ON proposals (status);
+            CREATE INDEX IF NOT EXISTS idx_proposals_niche ON proposals (niche);
+            """)
+            conn.execute(
+                "INSERT INTO schema_version (version, applied_at) VALUES (?, ?)",
+                (SCHEMA_VERSION, datetime.now().isoformat()),
+            )
+            print(f"Database initialized at schema v{SCHEMA_VERSION}: {DB_PATH}")
+        elif current_version < SCHEMA_VERSION:
+            _apply_migrations(conn, current_version)
 
 
 def log_proposal(data: dict) -> None:
@@ -136,11 +175,25 @@ def log_outcome(slug: str, status: str, notes: str = "") -> None:
             sys.exit(1)
 
         conn.execute("UPDATE proposals SET status = ? WHERE slug = ?", (status, slug))
+
+        if status == "replied":
+            sent_str = proposal["sent_date"]
+            if sent_str:
+                try:
+                    try:
+                        sent_dt = datetime.fromisoformat(sent_str)
+                    except ValueError:
+                        sent_dt = datetime.combine(date_type.fromisoformat(sent_str), datetime.min.time())
+                    reply_hours = round((datetime.now() - sent_dt).total_seconds() / 3600, 1)
+                    conn.execute("UPDATE proposals SET reply_hours = ? WHERE slug = ?", (reply_hours, slug))
+                except (ValueError, TypeError):
+                    pass
+
         conn.execute("""
             INSERT INTO outcomes (proposal_slug, event_type, event_date, notes)
             VALUES (?, ?, ?, ?)
         """, (slug, status, datetime.now().date().isoformat(), notes))
-        print(f"Outcome logged: {slug} → {status}")
+        print(f"Outcome logged: {slug} -> {status}")
 
 
 def quick_metrics() -> dict:
@@ -166,8 +219,8 @@ def quick_metrics() -> dict:
             GROUP BY niche
         """).fetchall()
 
-    reply_rate = f"{replies/total*100:.0f}%" if total > 0 else "—"
-    win_rate = f"{wins/total*100:.0f}%" if total > 0 else "—"
+    reply_rate = f"{replies/total*100:.0f}%" if total > 0 else "--"
+    win_rate = f"{wins/total*100:.0f}%" if total > 0 else "--"
 
     return {
         "total_proposals": total,
@@ -185,7 +238,7 @@ def weekly_report() -> None:
     metrics = quick_metrics()
 
     print("\n" + "="*55)
-    print("UPWORK OS — WEEKLY PERFORMANCE REPORT")
+    print("UPWORK OS -- WEEKLY PERFORMANCE REPORT")
     print(f"Generated: {datetime.now().strftime('%Y-%m-%d %H:%M')}")
     print("="*55)
 
@@ -199,8 +252,8 @@ def weekly_report() -> None:
         print(f"\nBY NICHE")
         for row in metrics["by_niche"]:
             niche = row["niche"] or "Untagged"
-            reply_rate = f"{row['replies']/row['proposals']*100:.0f}%" if row["proposals"] > 0 else "—"
-            win_rate = f"{row['wins']/row['proposals']*100:.0f}%" if row["proposals"] > 0 else "—"
+            reply_rate = f"{row['replies']/row['proposals']*100:.0f}%" if row["proposals"] > 0 else "--"
+            win_rate = f"{row['wins']/row['proposals']*100:.0f}%" if row["proposals"] > 0 else "--"
             print(f"  {niche:<25} {row['proposals']:>3} proposals | {reply_rate:>4} reply rate | {win_rate:>4} win rate")
 
     with get_conn() as conn:
