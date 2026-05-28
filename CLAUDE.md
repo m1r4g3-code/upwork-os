@@ -207,12 +207,43 @@ RATIONALE: [2 sentences. Honest. Challenge if needed.]
 
 **Pipeline (Claude Code is the engine — no external API calls):**
 
-**Step 0 — Classify Job Type (FIRST)**
+**Step 0 — Classify Job Type + Proposal Format (FIRST)**
 
-Does the job post contain: a website URL, social media links, or a Google-able business name?
+**Branch 1: Does the job have a website URL, social links, or Google-able business name?**
 
-- **YES → Context Job.** Run full 6-pass pipeline below.
-- **NO → No-Context Job (80% of jobs).** Skip to Pass 6 only: generate the short "request for context" Loom script. No prose proposal. See `playbooks/loom-strategy.md`.
+- **NO → No-Context Job.** Skip all passes. Go directly to Pass 6: short Loom asking for context. No text proposal.
+- **YES → Context Job.** Continue to Branch 2.
+
+**Branch 2: What proposal format?**
+
+Choose one format before writing anything:
+
+```
+Does the job signal ALL THREE of these?
+  (a) Budget $2,000+  OR  "submit detailed proposal" language
+  (b) Complex technical scope (multi-system, AI pipeline, architecture decisions)
+  (c) Client clearly knows what they want and is evaluating approaches
+
+  YES → PDF PROPOSAL FORMAT
+    Build a structured PDF: methodology + cost breakdown + timeline.
+    Upwork text box: "Hey [name], I put together a detailed proposal — see attached.
+    [Low-friction question]"
+    Skip Loom — the PDF does the persuasion.
+
+  NO → LOOM FORMAT  (default for all other context jobs)
+    Full 6-pass pipeline + 60–90s Loom + 3-line text wrapper.
+
+  Score 85+  AND  budget $5k+  AND  enterprise complexity?
+    → FULL COMBINATION: 3-line text + Loom + PDF attachment
+      Rarest format. Only for the highest-value bids.
+```
+
+| Signal | Format |
+|---|---|
+| No website / no business context | Short no-context Loom only |
+| Context job, standard scope | Loom + 3-line text |
+| Score 80+, $2k+, complex + RFP language | PDF proposal + short text intro |
+| Score 85+, $5k+, enterprise complexity | Text + Loom + PDF (all three) |
 
 To find context jobs proactively: Upwork Advanced Search → "Any of these words" → type `www`.
 
@@ -392,6 +423,42 @@ Weekly OS health check.
    - Niche recommendation (stay / rotate / double down)
    - Pricing recommendation
    - 3 concrete things to change this week
+
+---
+
+### `/quote [project-name]`
+**What you do:**
+Run the pricing calculator and generate SOW investment block.
+
+1. Call `python scripts/quote.py` (interactive) or with flags for speed:
+   ```
+   python scripts/quote.py --bid [client_budget] --type [project_type] --complexity [level]
+   python scripts/quote.py --sow --type automation --complexity complex --tools "n8n:0.05,openai:0.02" --volume 200
+   ```
+2. Output: bid recommendation + tiered pricing + 40/30/30 schedule + cost-per-run if automation
+3. Copy SOW investment block directly into the SOW document
+4. Save output to `outputs/strategy/YYYY-MM-DD-quote-SLUG.md`
+
+**When to run:** Before writing any SOW. After every discovery call. When client asks "how much?"
+
+---
+
+### `/close-contract [client-name] [project-name]`
+**What you do:**
+Run the handoff sequence to close a completed contract cleanly and engineer a 9–10 private NPS score.
+
+1. Call `python scripts/handoff.py` to generate the delivery brief
+2. Output: formatted delivery brief + contract close message + silent client follow-up scripts
+3. Save to `outputs/briefs/YYYY-MM-DD-handoff-SLUG.md`
+4. Update client node in `upwork/clients/active/` — add outcome, temperature, close date
+
+**Remind Emmanuel before sending:**
+- Pre-handoff checklist complete? (documented, tested, unexpected extra ready?)
+- Client temperature warm? (if cold — check-in call first)
+- Nothing will break in the next 7 days?
+
+**JSS rule:** Never close the contract yourself. Always let the client close.
+Freelancer-initiated contract endings = JSS negative regardless of reason.
 
 ---
 
