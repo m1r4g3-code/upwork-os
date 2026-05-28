@@ -1,6 +1,8 @@
 .env
 data/upwork_session.json
+data/upwork_cookies.json
 data/*.db
+cookies.txt
 __pycache__/
 *.pyc
 .DS_Store
