@@ -299,40 +299,137 @@ def audit_skills(profile: dict) -> dict:
 
 def audit_portfolio(profile: dict) -> dict:
     count = profile.get("portfolio_count", 0)
+    branded = profile.get("portfolio_branded", False)
+    has_loom_in_portfolio = profile.get("portfolio_has_loom", False)
     score = 0
     issues = []
     recommendations = []
 
+    # Count scoring -- Ramshaw target is 12 (fills 4 pages desktop, 3 mobile)
     if count == 0:
         score = 0
         issues.append("No portfolio items -- profile cannot compete without proof")
-    elif count == 1:
-        score = 3
-        issues.append("Only 1 portfolio item -- minimum 3 before serious bidding")
     elif count < 3:
+        score = 3
+        issues.append(f"{count} portfolio items -- minimum 3 before serious bidding")
+    elif count < 6:
         score = 5
-        issues.append(f"{count} portfolio items -- add 1 more before heavy bidding")
-    elif count >= 3:
-        score = 8
+        issues.append(f"{count} portfolio items -- target is 12 (fills 4 pages desktop, algorithm reward)")
+    elif count < 12:
+        score = 7
+        issues.append(f"{count} portfolio items -- target 12 to fill all pages")
+    else:
+        score = 9
+
+    # Branding check -- Ramshaw and top students all use consistent thumbnail style
+    if not branded:
+        score -= 2
+        issues.append("Portfolio thumbnails not branded -- each item should share same color/style. Ramshaw uses purple/pink consistently.")
+
+    # Loom in portfolio -- Ramshaw has Loom walkthroughs inside portfolio items
+    if not has_loom_in_portfolio:
+        score -= 1
+        issues.append("No Loom video inside portfolio items -- add 60-90 sec walkthrough to top 3 items")
 
     recommendations.append(
-        "Portfolio items to build right now (from your GitHub):\n\n"
-        "1. n8n-Aigent-app -- Loom video walkthrough (60-90 sec) showing the webhook -> AI agent -> response flow\n"
+        "Portfolio target: 12 items, all branded same thumbnail style\n\n"
+        "Items to build right now:\n\n"
+        "1. n8n-Aigent-app -- Loom video walkthrough showing webhook -> AI agent -> response flow\n"
         "   Title: 'Webhook-Driven AI Agent Workflow Manager'\n"
-        "   Description: Show 1 specific flow. Name the outcome. Screenshot the n8n canvas.\n\n"
-        "2. Distill -- Screen recording feeding a URL, showing the structured JSON output\n"
-        "   Title: 'URL -> Structured JSON for AI Pipelines and RAG Systems'\n"
-        "   Use case: 'Feed any webpage into your n8n workflow as clean structured data'\n\n"
-        "3. Case study placeholder for the German clinic work\n"
-        "   Title: 'AI Workflow System for Medical Admin Team'\n"
-        "   Note: Cannot claim this as an Upwork job. Frame as: 'Prior client engagement -- 4 production workflows built in 4 days'\n"
-        "   Show the outcome, not the client. Use metrics if you have them.\n\n"
-        "Each portfolio item MUST include:\n"
-        "  - SAR format: Situation (stakes) -> Action (what you built) -> Result (specific outcome)\n"
-        "  - At least 1 screenshot OR Loom walkthrough\n"
-        "  - Tech stack listed"
+        "   Thumbnail: Screenshot n8n canvas, overlay your brand color bar at bottom\n\n"
+        "2. Distill -- Screen recording: URL in, structured JSON out\n"
+        "   Title: 'URL -> Structured JSON for AI Pipelines and RAG Systems'\n\n"
+        "3. German clinic engagement\n"
+        "   Title: 'AI Workflow System for Medical Admin Team (4 Workflows in 4 Days)'\n"
+        "   Frame as prior client engagement, not Upwork job. Show outcome + metrics.\n\n"
+        "4-12. Build these -- see /project-radar for ranked ideas\n\n"
+        "Each item MUST include:\n"
+        "  - Branded thumbnail (Canva -- same colors as your profile ring)\n"
+        "  - Loom walkthrough (top 3 items at minimum)\n"
+        "  - 3-5 keywords in the skills section of each item\n"
+        "  - SAR format description: Situation -> Action -> Result"
+    )
+    return {"score": max(0, min(10, score)), "max": 10, "issues": issues, "recommendations": recommendations}
+
+
+def audit_testimonials(profile: dict) -> dict:
+    linkedin_testimonials = profile.get("linkedin_testimonials", 0)
+    upwork_reviews = profile.get("reviews_count", 0)
+    score = 0
+    issues = []
+    recommendations = []
+
+    total_social_proof = linkedin_testimonials + upwork_reviews
+
+    if total_social_proof == 0:
+        score = 0
+        issues.append("Zero social proof -- no reviews, no testimonials")
+    elif linkedin_testimonials == 0 and upwork_reviews < 3:
+        score = 3
+        issues.append("No LinkedIn testimonials -- this is free social proof you're leaving on the table")
+    elif linkedin_testimonials < 5:
+        score = 5
+        issues.append(f"Only {linkedin_testimonials} LinkedIn testimonials -- target is 5 minimum")
+    else:
+        score = 9
+
+    if upwork_reviews > 0 and linkedin_testimonials >= 5:
+        score = 10
+
+    recommendations.append(
+        "RAMSHAW'S LINKEDIN TESTIMONIAL HACK (free, takes < 1 day):\n\n"
+        "  Anyone with a LinkedIn account (even unused) can give you a testimonial on Upwork.\n"
+        "  Upwork sends them an email with a link. They click it, write a review.\n"
+        "  It shows up on your profile in 5-8 days. Clients cannot easily distinguish\n"
+        "  this from a real Upwork job review.\n\n"
+        "  To request: On your profile, go to Testimonials -> Request Testimonial.\n"
+        "  You need their: first name, last name, business email, LinkedIn URL.\n\n"
+        "  Who to ask:\n"
+        "  - Family members with LinkedIn\n"
+        "  - Past colleagues or clients (even informally)\n"
+        "  - Friends who run any kind of business\n"
+        "  - The German clinic contact (best one -- real engagement)\n\n"
+        "  Rule: Must NOT be a brand new LinkedIn account.\n"
+        "  Rule: If not showing after 8 days, open a support ticket with Upwork.\n\n"
+        "  TARGET: 5 LinkedIn testimonials + 3+ real Upwork reviews = 8+ total social proof signals"
     )
     return {"score": score, "max": 10, "issues": issues, "recommendations": recommendations}
+
+
+def audit_visibility(profile: dict) -> dict:
+    """Audits availability badge, video intro, profile ring, membership."""
+    available_now = profile.get("available_now_badge", False)
+    has_video_intro = profile.get("has_video_intro", False)
+    has_profile_ring = profile.get("has_profile_ring", False)
+    has_membership = profile.get("has_upwork_membership", False)
+    score = 5
+    issues = []
+    recommendations = []
+
+    if not available_now:
+        score -= 2
+        issues.append("'Available Now' badge OFF -- turn it on. Costs 2 connects/day but makes you stand out in search.")
+    if not has_video_intro:
+        score -= 2
+        issues.append("No video introduction -- Loom walkthrough of your profile + best work. Do this after portfolio is built.")
+    if not has_profile_ring:
+        score -= 1
+        issues.append("No ring/border around profile picture -- add in Canva. Stands out in client proposal view.")
+    if not has_membership:
+        score -= 1
+        issues.append("No Upwork Membership ($20/mo) -- gives free connects + shows proposal count. Nearly free ROI.")
+
+    recommendations.append(
+        "Visibility checklist:\n"
+        "  [ ] Available Now badge: Profile Settings -> Availability -> turn on\n"
+        "  [ ] Profile ring: Open Canva, add thin border (4-6px) in your brand color around profile photo\n"
+        "  [ ] Video intro: Record in Loom, scroll through your profile + show top 2 portfolio items.\n"
+        "       Do this AFTER portfolio is complete and branded.\n"
+        "       Script: 'Hey, I'm Emmanuel -- [outcome statement]. Here's a few projects I've built...'\n"
+        "  [ ] Upwork Membership: Settings -> Get Membership -> $20/mo\n"
+        "       Benefit: shows how many people applied to a job when you're sending proposals\n"
+    )
+    return {"score": max(0, min(10, score)), "max": 10, "issues": issues, "recommendations": recommendations}
 
 
 def audit_rate(profile: dict) -> dict:
@@ -401,23 +498,36 @@ def audit_completeness(profile: dict) -> dict:
     return {"score": max(0, min(10, score)), "max": 10, "issues": issues, "recommendations": recommendations}
 
 
+WEIGHT_MAP = {
+    "jss":           30,
+    "title":         18,
+    "overview":      15,
+    "portfolio":     12,
+    "testimonials":  10,
+    "skills":         8,
+    "visibility":     4,
+    "rate":           2,
+    "completeness":   1,
+}
+
+
 def run_full_audit(profile_override: dict = None) -> dict:
     profile = profile_override or extract_profile_data()
 
     sections = {
-        "jss": audit_jss(profile),
-        "title": audit_title(profile),
-        "overview": audit_overview(profile),
-        "portfolio": audit_portfolio(profile),
-        "skills": audit_skills(profile),
-        "rate": audit_rate(profile),
+        "jss":          audit_jss(profile),
+        "title":        audit_title(profile),
+        "overview":     audit_overview(profile),
+        "portfolio":    audit_portfolio(profile),
+        "testimonials": audit_testimonials(profile),
+        "skills":       audit_skills(profile),
+        "visibility":   audit_visibility(profile),
+        "rate":         audit_rate(profile),
         "completeness": audit_completeness(profile),
     }
 
-    # Weighted overall score
-    weight_map = {"jss": 30, "title": 20, "overview": 18, "portfolio": 15, "skills": 10, "rate": 4, "completeness": 3}
-    total_weight = sum(weight_map.values())
-    weighted_sum = sum(sections[k]["score"] * weight_map.get(k, 5) for k in sections)
+    total_weight = sum(WEIGHT_MAP.values())
+    weighted_sum = sum(sections[k]["score"] * WEIGHT_MAP.get(k, 5) for k in sections)
     overall = round(weighted_sum / total_weight)
 
     return {
@@ -447,10 +557,8 @@ def print_audit(audit: dict) -> None:
     print(f"OVERALL: {overall}/10 -- {grade}")
     print(bar)
 
-    weight_map = {"jss": 30, "title": 20, "overview": 18, "portfolio": 15, "skills": 10, "rate": 4, "completeness": 3}
-
     for section, data in audit["sections"].items():
-        weight = weight_map.get(section, 5)
+        weight = WEIGHT_MAP.get(section, 5)
         score = data["score"]
         bar_fill = "#" * score + "." * (10 - score)
         print(f"\n[{section.upper()}] {score}/10  {bar_fill}  (weight: {weight}%)")
@@ -468,7 +576,7 @@ def print_audit(audit: dict) -> None:
     print(f"PRIORITY ACTION ORDER (by algorithm impact):")
     # Sort sections by weight * (10 - score) to find highest-impact gaps
     gaps = sorted(
-        [(section, weight_map.get(section, 5) * (10 - data["score"])) for section, data in audit["sections"].items()],
+        [(section, WEIGHT_MAP.get(section, 5) * (10 - data["score"])) for section, data in audit["sections"].items()],
         key=lambda x: x[1], reverse=True
     )
     for i, (section, gap) in enumerate(gaps[:5], 1):
@@ -499,9 +607,8 @@ def save_output(audit: dict) -> Path:
         "|---|---|---|",
     ]
 
-    weight_map = {"jss": 30, "title": 20, "overview": 18, "portfolio": 15, "skills": 10, "rate": 4, "completeness": 3}
     for section, data in audit["sections"].items():
-        w = weight_map.get(section, 5)
+        w = WEIGHT_MAP.get(section, 5)
         lines.append(f"| {section.upper()} | {data['score']}/10 | {w}% |")
 
     lines += ["", "---", ""]
