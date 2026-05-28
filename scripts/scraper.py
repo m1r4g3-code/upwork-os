@@ -42,11 +42,12 @@ def setup_session() -> None:
 
     print()
     print("+------------------------------------------+")
-    print("|  Upwork Session Setup (run once only)    |")
+    print("|  Upwork Session Setup                    |")
     print("+------------------------------------------+")
     print()
-    print("A browser window will open. Log into Upwork normally.")
-    print("Come back here and press Enter when you are fully logged in.")
+    print("Browser opening. Log into Upwork.")
+    print("Session saves automatically when login is detected.")
+    print("(You have 5 minutes)")
     print()
 
     with sync_playwright() as p:
@@ -55,19 +56,33 @@ def setup_session() -> None:
         page = context.new_page()
         page.goto("https://www.upwork.com/login")
 
-        input(">> Logged in? Press Enter to save session and close browser...")
+        # Auto-detect login: wait for URL to leave login/signup pages
+        try:
+            page.wait_for_function(
+                "() => !window.location.href.includes('/login')"
+                " && !window.location.href.includes('/signup')"
+                " && !window.location.href.includes('/ab/account-security/login')",
+                timeout=300_000,  # 5 minutes
+            )
+        except Exception:
+            browser.close()
+            print("Timed out waiting for login. Run --setup again.")
+            sys.exit(1)
+
+        # Short wait for auth cookies to fully propagate
+        page.wait_for_timeout(3000)
 
         cookies = context.cookies()
-        SESSION_FILE.parent.mkdir(parents=True, exist_ok=True)
-        with open(SESSION_FILE, "w") as f:
-            json.dump(cookies, f, indent=2)
-
         browser.close()
 
-    print(f"Session saved to {SESSION_FILE}")
+    SESSION_FILE.parent.mkdir(parents=True, exist_ok=True)
+    with open(SESSION_FILE, "w") as f:
+        json.dump(cookies, f, indent=2)
+
+    print(f"Login detected. Session saved -> {SESSION_FILE}")
     print()
-    print("You can now run the scraper on any Upwork job URL.")
-    print("If you get logged-out errors later, just run --setup again.")
+    print("Scraper is ready. Run:")
+    print("  python scripts/scraper.py <upwork-job-url>")
 
 
 def _check_session() -> list:
@@ -302,7 +317,7 @@ def fetch_page_text(url: str) -> str:
     cookies = _check_session()
 
     with sync_playwright() as p:
-        browser = p.chromium.launch(headless=True)
+        browser = p.chromium.launch(headless=False)
         context = browser.new_context(
             user_agent=(
                 "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
