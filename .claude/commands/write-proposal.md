@@ -116,6 +116,10 @@ Write the proposal. Hard constraints:
 
 **No hyphens in compound words** — write "real time" not "real-time"
 
+**No em dashes (—) ever.** Replace with a period, comma, colon, or "..." for a trailing pause. This is a permanent rule.
+
+Ellipsis (...) is allowed for deliberate pauses or trailing thoughts. Use it naturally, not in every sentence.
+
 ---
 
 **HUMAN REALISM VOICE STANDARD (applies to every proposal)**
