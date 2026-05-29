@@ -359,19 +359,35 @@ def _parse_text(text: str, url: str) -> dict:
     client = {}
 
     # --- Title ---
-    skip_words = ("upwork", "find jobs", "log in", "sign up", "back to",
-                  "jobs >", "skills", "budget", "posted", "apply", "save")
-    for line in full.splitlines()[:60]:
-        clean = line.strip()
-        if (len(clean) > 15 and len(clean) < 200
-                and not any(clean.lower().startswith(s) for s in skip_words)
-                and not clean.startswith("$")
-                and not re.match(r"^\d", clean)):
-            job["title"] = clean
-            break
+    # Primary: Upwork clipboard always puts job title right after "Account Settings"
+    title_m = re.search(r"Account Settings\n+(.+?)(?:\n|$)", full)
+    if title_m:
+        candidate = title_m.group(1).strip()
+        if len(candidate) > 5 and not candidate.lower().startswith("search"):
+            job["title"] = candidate
+
+    # Fallback: scan first 60 lines
+    if not job.get("title"):
+        skip_words = ("upwork", "find jobs", "log in", "sign up", "back to",
+                      "jobs >", "skills", "budget", "posted", "apply", "save",
+                      "search category", "search", "skip to")
+        for line in full.splitlines()[:60]:
+            clean = line.strip()
+            if (len(clean) > 15 and len(clean) < 200
+                    and not any(clean.lower().startswith(s) for s in skip_words)
+                    and not clean.startswith("$")
+                    and not re.match(r"^\d", clean)):
+                job["title"] = clean
+                break
 
     # --- Budget ---
-    hourly_m = (re.search(r"\$\s*([\d,.]+)\s*[-–]\s*\$\s*([\d,.]+)\s*/\s*hr", full, re.I)
+    # Multi-line Upwork format: "$25.00\n-\n$47.00\nHourly"
+    multiline_hourly = re.search(
+        r"\$\s*([\d,.]+)\s*\n-\n\$\s*([\d,.]+)\s*\n[Hh]ourly",
+        full
+    )
+    hourly_m = (multiline_hourly
+                or re.search(r"\$\s*([\d,.]+)\s*[-–]\s*\$\s*([\d,.]+)\s*/\s*hr", full, re.I)
                 or re.search(r"\$\s*([\d,.]+)\s*/\s*hr", full, re.I))
     fixed_m  = (re.search(r"\$\s*([\d,]+)\s*[-–]\s*\$\s*([\d,]+)", full)
                 or re.search(r"[Ff]ixed.{0,30}\$\s*([\d,]+)", full)
@@ -432,17 +448,18 @@ def _parse_text(text: str, url: str) -> dict:
         job["skills"] = [s.strip() for s in raw_skills if s.strip() and len(s.strip()) < 60]
 
     # --- Client fields ---
-    client["payment_verified"] = bool(re.search(r"[Pp]ayment\s+[Vv]erified", full))
+    client["payment_verified"] = bool(re.search(r"[Pp]ayment\s+(?:\w+\s+)?[Vv]erified", full))
 
     country_m = (re.search(r"[Cc]ountry[:\s]+([A-Z][a-zA-Z\s,]+?)(?:\n|$)", full)
                  or re.search(r"[Ll]ocation[:\s]+([A-Z][a-zA-Z\s,]+?)(?:\n|$)", full)
+                 or re.search(r"\d+\s+of\s+\d+\s+reviews?\n([A-Z][a-zA-Z ]+)\n", full)
                  or re.search(r"[Mm]ember since.{0,60}\n([A-Z][a-zA-Z\s,]{2,40})(?:\n|$)", full))
     if country_m:
         client["country"] = country_m.group(1).strip()
 
-    spent_m = (re.search(r"\$\s*([\d,]+[KkMm]?\+?)\s+[Ss]pent", full)
-               or re.search(r"[Ss]pent[:\s]+\$?\s*([\d,]+[KkMm]?)", full)
-               or re.search(r"(\$[\d,]+[KkMm]?\+?)\s*total spent", full, re.I))
+    spent_m = (re.search(r"(\$[\d,]+[KkMm]?\+?)\s*total spent", full, re.I)
+               or re.search(r"\$\s*([\d,]+[KkMm]?\+?)\s+[Ss]pent", full)
+               or re.search(r"[Ss]pent[:\s]+\$\s*([\d,]+[KkMm]?)", full))
     if spent_m:
         client["total_spend_usd"] = _parse_spend(spent_m.group(1))
 

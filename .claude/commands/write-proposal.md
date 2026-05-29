@@ -157,9 +157,37 @@ If score < 7, revise and re-check. Do not output a draft that fails voice check.
 
 ---
 
-### Step 7 — Loom Script (for Context Jobs using Loom format)
+### Step 6.5 — Auto-Roast (mandatory)
 
-**Full audit Loom (60-90 sec):**
+After voice check passes, run `/roast-proposal` on the draft internally. This is not optional.
+
+Criteria that block output (must fix before saving):
+- Roast score below 7/10
+- Any AI slop word from the banned list present
+- Passive voice in more than one sentence
+- Zero casual asides (no "tbh", "honestly", "actually", "the weird part is")
+- Zero operational specificity (no failure, tradeoff, or unexpected detail mentioned)
+- Every paragraph is roughly the same length (AI cadence)
+
+Fix all blockers, then re-run the roast mentally. Only output when the proposal would score 7+.
+
+This step exists because voice.py catches style issues but misses AI texture problems. The roast catches what voice.py misses.
+
+---
+
+### Step 7 — Loom Script
+
+**Which Loom type to use:**
+
+| Job type | Loom format |
+|---|---|
+| Has website / social links / Google-able business | Full audit Loom (60-90 sec) |
+| No website, no business name — role-based (social media manager, VA, content creator, etc.) | Portfolio Loom (2-3 min) |
+| Truly no context at all | No-context Loom (under 45 sec) |
+
+---
+
+**Full audit Loom (60-90 sec) — for context jobs:**
 ```
 [0:00-0:08] Open on their website/job post on screen
             "I was looking at your [site/post]..." — start with their situation
@@ -169,7 +197,24 @@ If score < 7, revise and re-check. Do not output a draft that fails voice check.
 [1:00-1:15] Low-friction closing question (same as written proposal)
 ```
 
-**No-context Loom (under 45 sec):**
+**Portfolio Loom (2-3 min) — for role-based jobs without a website:**
+```
+[0:00-0:10] Address the job directly
+            "You're looking for [role]. Here's what that actually looks like when I do it."
+[0:10-0:50] Show 2-3 relevant portfolio pieces on screen
+            Name each one specifically. Describe the brief, the constraint, what you made.
+            Don't narrate — show and explain as you go.
+[0:50-1:30] Pick the most relevant piece and go deeper
+            What was the brief? What made it work? What would you do differently?
+[1:30-2:00] One line on process/workflow
+            "I batch content [X way], use AI for [specific thing], handle [Y] manually."
+[2:00-2:15] Low-friction closing question
+            Same question as the written proposal.
+```
+
+This Loom works for social media, content, design, VA, and any role where the portfolio IS the proof. It does what a text proposal can't: it shows the work, shows how you think about it, and creates connection without any website context needed.
+
+**No-context Loom (under 45 sec) — when no information at all is available:**
 ```
 "Hey, I really want to help but there isn't enough context in this post for me
 to give you a full audit. If you can send your website or social links, I'll do
@@ -202,16 +247,25 @@ Save to `outputs/proposals/YYYY-MM-DD-[client]-[slug].md` using this header:
 **Status:** draft
 **Job file:** sources/jobs/YYYY-MM-DD-slug.json
 **Voice score:** [N]/10
+**Roast score:** [N]/10
+
+---
+> SUBMIT AT: $[rate]/hr  (profile default is NOT this — do not forget to change it)
 ---
 
 ## Proposal Text
 [final text]
 
 ## Loom Script
-[if applicable]
+[if applicable — include type: audit / portfolio / no-context]
 
 ## Strategy Notes
 [archetype, psychology read, positioning angle used]
+
+## Rate Rationale
+**Recommended rate:** $[X]/hr
+**Floor:** $[Y]/hr (walk below this)
+**Rationale:** [1 sentence — why this number, not the profile default]
 ```
 
 ---
