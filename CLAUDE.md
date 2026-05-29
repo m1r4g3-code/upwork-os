@@ -487,6 +487,22 @@ Output: Is this niche worth staying in? What sub-niche shows highest signal? Wha
 
 ---
 
+### `/gap-audit`
+**When to run:** After any session with 3+ skipped jobs. Monthly on the first of each month. Any time Emmanuel says "why do we keep skipping everything." After account switch.
+
+**What you do:**
+1. Read all job cards in `upwork/jobs/archive/` — extract decision, skip category, scores
+2. Read `outputs/proposals/` — identify any BID decisions that were not sent (backed-off)
+3. Read `upwork/identity/profile.md` and `upwork/identity/account-situation.md`
+4. Categorize every skip: `duration_mismatch` / `client_quality` / `profile_weakness` / `no_industry_fit` / `rate_mismatch` / `competition_overload` / `hard_disqualifier` / `backed_off`
+5. Count patterns. Check average fit score (if > 75 across skips, fit is NOT the problem)
+6. Output: skip breakdown → root cause verdict → prioritized fix list → portfolio projects to build → time-bounded constraints
+7. If `backed_off` count >= 2 in same session: name the pattern directly in Root Cause Verdict
+8. Save to `outputs/strategy/YYYY-MM-DD-gap-audit.md`
+9. Append one-line summary to `upwork/performance/insights.md`
+
+---
+
 ### `/strategy-review`
 **What you do:**
 Weekly OS health check.
