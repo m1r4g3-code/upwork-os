@@ -95,7 +95,7 @@ Write the proposal. Hard constraints:
 **Structure:**
 ```
 [Opener — 1 sentence. Start with THEIR situation. Not "I".]
-[3-4 bullet observations — scannable, specific]
+[Body — proof + specifics. Bullets optional, NOT required.]
 [Loom link placeholder or portfolio proof — 1 line]
 [Low-friction closing question — 1 sentence]
 ```
@@ -105,21 +105,39 @@ Write the proposal. Hard constraints:
 **First word:** Cannot be "I"
 
 **Banned phrases (any of these = rewrite immediately):**
-- "I would be delighted to"
-- "I am passionate about"
-- "as per your requirements"
-- "I hope to hear from you"
-- "I look forward to hearing"
-- "leverage" / "leveraging"
-- "synergy" / "holistic" / "robust" / "seamless"
-- "cutting-edge" / "state-of-the-art"
-- "I have extensive experience"
-- "I am excited to"
-- "Thank you for considering"
-
-**Voice:** Direct. Confident. Slightly senior. Not eager. Not formal.
+- "I would be delighted to" / "I am passionate about"
+- "as per your requirements" / "I hope to hear from you"
+- "I look forward to hearing" / "I have extensive experience"
+- "I am excited to" / "Thank you for considering"
+- "leverage" / "leveraging" / "synergy" / "holistic"
+- "robust" / "seamless" / "cutting-edge" / "state-of-the-art"
+- "streamlined" / "Here's what I bring"
+- "What I bring to your stack:" (AI framing — rewrite it)
 
 **No hyphens in compound words** — write "real time" not "real-time"
+
+---
+
+**HUMAN REALISM VOICE STANDARD (applies to every proposal)**
+
+Proposals must feel like an experienced person typed this after reading the job, not a system generating output.
+
+**What to do:**
+- Vary sentence length aggressively. Short. Medium. One longer flowing thought that trails off naturally.
+- Include operational realism — a specific edge case, a thing that went wrong, a tradeoff you actually hit. This is the single biggest signal of a real engineer.
+  - HUMAN: "Added retries because the API would randomly drop jobs some days for no obvious reason."
+  - AI: "Implemented robust retry logic."
+- Allow one casual aside — "honestly", "actually", "tbh", "the weird part is"
+- Proof point must mention something specific that broke, took longer than expected, or required an unexpected decision. Generic proof is AI proof.
+- Emotion is implied through detail, never stated. "Runs without anyone touching it now" > "I successfully automated the process."
+- One soft hedge somewhere: "probably", "should be", "usually", "unless something breaks"
+- Ending can be abrupt. Proposals don't need clean summaries.
+
+**What NOT to do:**
+- Perfectly balanced bullet points of equal length — that's AI cadence
+- Every sentence starting with a subject — vary the front-loading
+- Clinical capability summaries ("I have experience with X, Y, Z")
+- Sounding presentation-aware — write like you're talking, not presenting
 
 ---
 
