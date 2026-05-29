@@ -11,6 +11,7 @@ Usage:
 """
 
 import json
+import re
 import sys
 from pathlib import Path
 from datetime import datetime
@@ -18,6 +19,8 @@ from datetime import datetime
 ROOT = Path(__file__).parent.parent
 DATA_DIR = ROOT / "data"
 DATA_DIR.mkdir(exist_ok=True)
+
+PROFILE_FILE = ROOT / "hephzibah-brain-temp" / "upwork" / "identity" / "profile.md"
 
 # Soft red flag phrases -- applied as penalties in score_job_quality
 RED_FLAG_PHRASES = [
@@ -386,6 +389,179 @@ def make_decision(score: int, disqualifiers: list[str], client_red_flags: list[s
     return "BID"
 
 
+def load_profile() -> dict:
+    """Read profile.md YAML frontmatter. Returns empty dict if file missing."""
+    if not PROFILE_FILE.exists():
+        return {}
+    text = PROFILE_FILE.read_text(encoding="utf-8")
+    # Extract content between first --- and second ---
+    m = re.search(r"^---\s*\n(.*?)\n---", text, re.DOTALL)
+    if not m:
+        return {}
+    block = m.group(1)
+
+    profile = {}
+
+    def _get(key, default=None):
+        km = re.search(rf'^{key}\s*:\s*(.+)$', block, re.MULTILINE)
+        return km.group(1).strip().strip('"') if km else default
+
+    profile["account_owner"] = _get("account_owner", "unknown")
+    profile["badge"] = _get("badge", "none")
+    profile["rate_usd"] = float(_get("rate_usd") or 0)
+    profile["total_reviews"] = int(_get("total_reviews") or 0)
+    jss_raw = _get("jss", "null")
+    profile["jss"] = None if jss_raw in ("null", "~", "") else float(jss_raw)
+    profile["title"] = _get("title", "")
+
+    # Parse list fields
+    def _get_list(key):
+        km = re.search(rf'^{key}\s*:\s*\n((?:  - .+\n?)+)', block, re.MULTILINE)
+        if not km:
+            return []
+        return [re.sub(r'^  - ', '', l).strip().strip('"') for l in km.group(1).splitlines() if l.strip()]
+
+    profile["overview_keywords"] = _get_list("overview_keywords")
+    profile["skills_listed"] = _get_list("skills_listed")
+
+    # Portfolio categories
+    cat_matches = re.findall(r'category:\s*"?([^"\n]+)"?', block)
+    profile["portfolio_categories"] = [c.strip() for c in cat_matches if c.strip() != "none"]
+
+    return profile
+
+
+def score_profile_fit(job_data: dict, client_data: dict, profile: dict) -> tuple[int, list[str], list[str]]:
+    """
+    Score how well the current profile backs up a proposal for this job.
+    Simulates what the client sees when they click through after reading the proposal.
+
+    Returns (score 0-100, reasons, warnings)
+    """
+    if not profile:
+        return 50, ["Profile data not found — using neutral score"], ["Update hephzibah-brain-temp/upwork/identity/profile.md"]
+
+    score = 0
+    reasons = []
+    warnings = []
+
+    desc = (job_data.get("description") or "").lower()
+    title = (job_data.get("title") or "").lower()
+    job_text = desc + " " + title
+
+    # 1. JSS / Badge (0-25 pts) ─────────────────────────────────────────────
+    badge = profile.get("badge", "none")
+    jss = profile.get("jss")
+    if jss and jss >= 90:
+        score += 25
+        reasons.append("+25: JSS 90+ — algorithm-visible credibility")
+    elif badge == "top_rated_plus":
+        score += 24
+        reasons.append("+24: Top Rated Plus badge")
+    elif badge == "top_rated":
+        score += 20
+        reasons.append("+20: Top Rated badge")
+    elif badge == "rising_talent":
+        score += 12
+        reasons.append("+12: Rising Talent badge — partial credibility signal")
+        warnings.append("Rising Talent: experienced clients may filter for JSS. Proposal must work harder.")
+    else:
+        score += 4
+        reasons.append("+4: No badge, no JSS — profile credibility is low")
+        warnings.append("No badge or JSS: sophisticated clients often skip new accounts.")
+
+    # 2. Profile title keyword match (0-25 pts) ─────────────────────────────
+    profile_title = profile.get("title", "").lower()
+    job_keywords = re.findall(r'\b\w{4,}\b', title + " " + " ".join(
+        re.findall(r'\b(n8n|claude|openai|automation|workflow|ai|agent|react|python|'
+                   r'typescript|nextjs|airtable|zapier|make|crm|chatbot|rag)\b', job_text)
+    ))
+    title_hits = [kw for kw in set(job_keywords) if kw in profile_title]
+    if len(title_hits) >= 3:
+        score += 25
+        reasons.append(f"+25: profile title matches job keywords ({', '.join(title_hits[:4])})")
+    elif len(title_hits) == 2:
+        score += 18
+        reasons.append(f"+18: profile title partially matches ({', '.join(title_hits)})")
+    elif len(title_hits) == 1:
+        score += 10
+        reasons.append(f"+10: one keyword match in title ({title_hits[0]})")
+    else:
+        score += 0
+        warnings.append("Profile title has no keyword overlap with this job — client may not recognise the fit.")
+
+    # 3. Portfolio relevance (0-25 pts) ─────────────────────────────────────
+    portfolio_cats = profile.get("portfolio_categories", [])
+    job_categories = []
+    if any(w in job_text for w in ["automation", "workflow", "n8n", "agent", "crm", "chatbot"]):
+        job_categories.append("automation")
+    if any(w in job_text for w in ["social media", "instagram", "content", "canva", "ugc"]):
+        job_categories.append("social-media")
+    if any(w in job_text for w in ["web", "react", "next.js", "dashboard", "portal", "frontend"]):
+        job_categories.append("web-dev")
+    if any(w in job_text for w in ["email", "newsletter", "mailchimp"]):
+        job_categories.append("email-marketing")
+
+    portfolio_hits = [c for c in job_categories if c in portfolio_cats]
+    if len(portfolio_hits) >= 2:
+        score += 25
+        reasons.append(f"+25: portfolio has multiple relevant items ({', '.join(portfolio_hits)})")
+    elif len(portfolio_hits) == 1:
+        score += 15
+        reasons.append(f"+15: portfolio has one relevant item ({portfolio_hits[0]})")
+    elif portfolio_cats:
+        score += 5
+        reasons.append("+5: portfolio exists but not directly relevant to this job")
+        warnings.append("Portfolio items don't match this job category — client will see misalignment.")
+    else:
+        score += 0
+        warnings.append("No portfolio items yet — this is the biggest profile gap. Client asked for examples.")
+
+    # 4. Rate alignment vs client avg paid (0-15 pts) ───────────────────────
+    client_avg = client_data.get("avg_hourly_paid", 0) or 0
+    profile_rate = profile.get("rate_usd", 0)
+    if client_avg > 0 and profile_rate > 0:
+        ratio = profile_rate / client_avg
+        if ratio <= 1.3:
+            score += 15
+            reasons.append(f"+15: rate ${profile_rate}/hr close to client avg ${client_avg:.0f}/hr")
+        elif ratio <= 2.0:
+            score += 8
+            reasons.append(f"+8: rate ${profile_rate}/hr above client avg ${client_avg:.0f}/hr but acceptable")
+        else:
+            score += 3
+            reasons.append(f"+3: rate ${profile_rate}/hr significantly above client avg ${client_avg:.0f}/hr")
+            warnings.append(f"Rate gap: your ${profile_rate}/hr vs client avg ${client_avg:.0f}/hr. Proposal must justify the premium.")
+    else:
+        score += 8  # neutral if no data
+
+    # 5. Overview / skills relevance (0-10 pts) ─────────────────────────────
+    overview_kws = [kw.lower() for kw in profile.get("overview_keywords", [])]
+    skills = [s.lower() for s in profile.get("skills_listed", [])]
+    profile_terms = set(overview_kws + skills)
+    job_term_hits = [t for t in profile_terms if t in job_text]
+    if len(job_term_hits) >= 4:
+        score += 10
+        reasons.append(f"+10: overview/skills strongly aligned ({', '.join(list(job_term_hits)[:4])})")
+    elif len(job_term_hits) >= 2:
+        score += 6
+        reasons.append(f"+6: overview/skills partially aligned ({', '.join(list(job_term_hits)[:3])})")
+    elif len(job_term_hits) == 1:
+        score += 3
+    else:
+        warnings.append("Profile overview/skills have no overlap with job terms.")
+
+    score = max(0, min(100, score))
+
+    # Overall profile warning
+    if score < 40:
+        warnings.append("PROFILE TOO WEAK for this job — connects risk is high. Build portfolio first.")
+    elif score < 55:
+        warnings.append("Profile has gaps. Proposal must compensate. Consider whether connects are worth it.")
+
+    return score, reasons, warnings
+
+
 def qualify_job(filepath: str) -> dict:
     with open(filepath) as f:
         data = json.load(f)
@@ -393,14 +569,26 @@ def qualify_job(filepath: str) -> dict:
     job_data = data.get("job", data)
     client_data = data.get("client", {})
 
+    profile = load_profile()
+
     jq, jq_reasons = score_job_quality(job_data)
     cq, cq_reasons, client_red_flags = score_client_quality(client_data)
     fit, fit_reasons = score_fit(job_data)
     urgency, urgency_reasons = score_urgency(job_data)
     competition, competition_reasons = score_competition(job_data)
+    pf, pf_reasons, pf_warnings = score_profile_fit(job_data, client_data, profile)
     disqualifiers = check_hard_disqualifiers(job_data, client_data)
     composite = composite_score(jq, cq, fit, urgency, competition)
     dec = make_decision(composite, disqualifiers, client_red_flags, fit)
+
+    # Downgrade BID to WATCHLIST if profile is too weak to back up the proposal
+    if dec == "BID" and pf < 40:
+        dec = "WATCHLIST"
+        dec_note = "Downgraded BID → WATCHLIST: profile fit too weak to justify connects spend."
+    elif dec == "BID" and pf < 65:
+        dec_note = "BID with caution: profile has gaps — proposal must work harder than usual."
+    else:
+        dec_note = ""
 
     return {
         "title": job_data.get("title", "Unknown"),
@@ -412,16 +600,27 @@ def qualify_job(filepath: str) -> dict:
             "urgency": urgency,
             "competition": competition,
             "composite": composite,
+            "profile_fit": pf,
         },
         "decision": dec,
+        "decision_note": dec_note,
+        "profile": {
+            "account": profile.get("account_owner", "unknown"),
+            "badge": profile.get("badge", "none"),
+            "jss": profile.get("jss"),
+            "rate_usd": profile.get("rate_usd"),
+            "portfolio_items": len(profile.get("portfolio_categories", [])),
+        },
         "hard_disqualifiers": disqualifiers,
         "client_red_flags": client_red_flags,
+        "profile_warnings": pf_warnings,
         "score_reasons": {
             "job_quality": jq_reasons,
             "client_quality": cq_reasons,
             "fit": fit_reasons,
             "urgency": urgency_reasons,
             "competition": competition_reasons,
+            "profile_fit": pf_reasons,
         },
         "evaluated_at": datetime.now().isoformat(),
     }
