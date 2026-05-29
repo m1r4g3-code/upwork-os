@@ -503,12 +503,16 @@ def score_profile_fit(job_data: dict, client_data: dict, profile: dict) -> tuple
         job_categories.append("email-marketing")
 
     portfolio_hits = [c for c in job_categories if c in portfolio_cats]
-    if len(portfolio_hits) >= 2:
+    matching_item_count = sum(1 for c in portfolio_cats if c in job_categories)
+    if matching_item_count >= 4:
         score += 25
-        reasons.append(f"+25: portfolio has multiple relevant items ({', '.join(portfolio_hits)})")
-    elif len(portfolio_hits) == 1:
-        score += 15
-        reasons.append(f"+15: portfolio has one relevant item ({portfolio_hits[0]})")
+        reasons.append(f"+25: portfolio has {matching_item_count} relevant items ({', '.join(set(portfolio_hits))})")
+    elif matching_item_count >= 2:
+        score += 18
+        reasons.append(f"+18: portfolio has {matching_item_count} relevant items ({', '.join(set(portfolio_hits))})")
+    elif matching_item_count == 1:
+        score += 10
+        reasons.append(f"+10: portfolio has 1 relevant item ({portfolio_hits[0]})")
     elif portfolio_cats:
         score += 5
         reasons.append("+5: portfolio exists but not directly relevant to this job")
