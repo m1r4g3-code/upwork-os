@@ -181,6 +181,48 @@ Keywords go everywhere: profile title, overview, portfolio titles, portfolio des
 **21. The $15k close workflow — what happens after the reply**
 Ramshaw: "Act like a doctor." On the discovery call: brief rapport → "Tell me more about the project" → shut up and listen. The more they talk, the more they invest, the more likely they hire. Record the call with Fathom → get transcript → put into AI → build a Scope of Work PDF. Send the SOW with a split payment: ~40% upfront, ~30% at midpoint, ~30% on completion. When 60 people applied at $4-5k, he pitched $15k. He got it. Use Upwork's built-in scheduling or Zoom link — send ONE link, no back-and-forth on times.
 
+**22. Free LinkedIn testimonials — fastest social proof without a new contract**
+Anyone with a LinkedIn account can leave you a testimonial on your Upwork profile. Upwork emails them a link, they write a review, it appears in 5-8 days. Doesn't need to be an actual Upwork client — friend, family, anyone who knows your work. Requirements: aged LinkedIn account (not brand new), valid business email. If stuck after 8 days: open Upwork support ticket and ask them to push it through. Get at least 5 of these. "In 6 years I've never met anyone who doesn't know at least 5 people with a LinkedIn account."
+
+**23. Portfolio = 12 pieces, 2-3 paragraphs each, multiple images, tied to testimonials**
+Upwork shows 3 portfolio pieces per page on desktop, 4 per page on mobile. Do 12 pieces = 4 pages on desktop. Each piece needs: multiple images (not just one), 2-3 paragraphs of context, branded thumbnails consistent with your profile picture style. Tie portfolio pieces to LinkedIn testimonials — if Bob the client gave you a testimonial, create a portfolio piece about Bob's project. The two reinforce each other and make even fabricated client work look credible. "You're 5x more likely to get hired with a good portfolio section." Don't put all pieces in the same industry — cast the net wide across industries.
+
+**24. The consistency rule — 10 proposals/day for 30-90 days**
+"I've never met anyone in 10 years who sent 10 personalized proposals per day for 30-90 days and didn't land clients. It's mathematically almost impossible not to." Volume with personalization is the engine. With selective bidding (composite ≥65), 10/day is the discipline target. Don't send on bad days — send quality on good ones, but hit the rhythm.
+
+**25. Connects returned on reply — changes the math on no-context bids**
+When a client replies to your proposal, Upwork returns some of the connects you spent. This means no-context Loom proposals (asking for context) protect the connects budget — even if only 30% reply, you recover connects from those. It's not just about reply rate; it's about connect ROI. This is why the no-context Loom strategy makes financial sense, not just strategic sense.
+
+**26. The Big 4 — profile build order**
+Before anything else: (1) 100% profile completion — required to unlock Rising Talent and all future badges. (2) Keywords everywhere — count with Ctrl+F: "n8n" should appear 6+ times, primary skill should appear 15-25+ times across ALL sections including skills list inside each portfolio piece. (3) Shorten name if long or hard to pronounce — Jatinder → Jay immediately got more replies. (4) Rising Talent badge — appears after 100% completion + activity. Clients don't know what it means but a badge looks good.
+
+**27. Research phase — find $100K+ earner profiles and copy them**
+In Upwork search → click Talent → type your niche → scroll down → filter by Earned Amount → $10K+ → then edit URL and add zeros to see $100K+ earners. Bookmark these profiles. Study: how do they write their title? How do they structure portfolio? What keywords appear most? This is Step 0 of any profile build or optimization. "Great art is stolen."
+
+**28. Free certifications for keyword placement**
+Upwork lets you add certifications to your profile — and you can create 2 completely free ones. Use these as additional keyword placement locations. A certification in "n8n Automation" or "AI Workflow Design" adds another keyword hit to your profile.
+
+**29. "Available now" badge — 2 connects/day, always on**
+The "available now" badge costs 2 connects per day but makes your profile thumbnail stand out (especially combined with a ring around your profile picture). Always have it on. The connect cost is negligible relative to what a single won project is worth.
+
+**30. Ask clients to rename contract titles with your keyword**
+When a contract is active, ask the client if they'd mind renaming the contract title to include your keyword (e.g., "n8n Automation for [their company]"). The contract title shows in your Upwork work history. Every contract with your keyword in the title is another SEO signal. Most clients will say yes if you ask nicely.
+
+**31. Upwork Mirror — external keyword ranking tool**
+uprankmir.com (Upwork Mirror) is an external tool that shows your keyword rankings on Upwork and what skills you're ranking for. Not official, not perfect (doesn't count closed deals), but useful to diagnose which keywords your profile is registering for. Run a check on your profile after major profile updates.
+
+**32. Up Cat — job alert tool for first-mover advantage**
+Up Cat (upcat.io) is a browser extension that sends notifications when new jobs come in matching your skills. Being among the first to apply gives a statistically significant boost — "80% more likely to close clients if you're one of the first to apply." Set alerts for primary keywords. First 2 hours on a job = highest ROI window.
+
+**33. The "Peace" P.S. — people always read the last line**
+End proposals with a P.S. line, personalized and slightly casual. "It's scientifically proven that people scroll through an entire message but they will always read the 'peace'." Use it: "P.S. Where in [country] are you based?" or something specific from their post. This is the one line they're guaranteed to read — make it feel like you actually looked at their profile.
+
+**34. Rate increase = never on hourly proposal submissions**
+When submitting an hourly proposal, Upwork asks if you want to schedule automatic rate increases (every 3 months). Always select "Never." Asking for rate increases at proposal stage signals you're thinking about your money, not their project. It looks bad. "I can't tell you how many times I've posted jobs on Upwork and people want a rate increase of $0.30 every 3 months — ridiculous."
+
+**35. The "convenience paradise" — remove friction everywhere**
+Every element of your profile and proposals should make it more convenient for the client to hire you. If it's hard to read, hard to understand, hard to respond to, or hard to take action on — the client moves on. The goal at every stage is to be the path of least resistance. This is why Loom videos work: easier than reading. Why questions work: easier to reply than commit. Why short proposals work: easier to finish reading.
+
 ---
 
 ## Commands — Full Reference
