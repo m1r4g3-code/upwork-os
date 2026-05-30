@@ -16,13 +16,48 @@ import sys
 import os
 import re
 import json
-import base64
 import shutil
 import tempfile
 import subprocess
 import argparse
 from pathlib import Path
 from datetime import datetime
+
+# ── ffmpeg resolver ──────────────────────────────────────────────────────────
+
+_FFMPEG_FALLBACK_DIRS = [
+    # WinGet Gyan.FFmpeg (most common Windows install)
+    str(Path.home() / "AppData/Local/Microsoft/WinGet/Packages"),
+    # Chocolatey
+    "C:/ProgramData/chocolatey/bin",
+    # Scoop
+    str(Path.home() / "scoop/shims"),
+    # BlueStacks bundles ffmpeg
+    "C:/Program Files/BlueStacks_nxt",
+]
+
+def _find_ffmpeg() -> str:
+    # 1. On PATH
+    found = shutil.which("ffmpeg")
+    if found:
+        return found
+    # 2. WinGet install tree (Gyan.FFmpeg)
+    winget_base = Path.home() / "AppData/Local/Microsoft/WinGet/Packages"
+    if winget_base.exists():
+        for pkg in winget_base.glob("Gyan.FFmpeg*"):
+            exe = next(pkg.rglob("ffmpeg.exe"), None)
+            if exe:
+                return str(exe)
+    # 3. Other fallback dirs
+    for d in _FFMPEG_FALLBACK_DIRS[1:]:
+        candidate = Path(d) / "ffmpeg.exe"
+        if candidate.exists():
+            return str(candidate)
+    return ""
+
+
+FFMPEG_EXE = _find_ffmpeg()
+
 
 # ── Dependency checks ────────────────────────────────────────────────────────
 
@@ -31,27 +66,27 @@ def check_deps():
     try:
         import yt_dlp
     except ImportError:
-        missing.append("yt-dlp (pip install yt-dlp)")
+        missing.append("yt-dlp  →  pip install yt-dlp")
     try:
         import faster_whisper
     except ImportError:
-        missing.append("faster-whisper (pip install faster-whisper)")
+        missing.append("faster-whisper  →  pip install faster-whisper")
     try:
         import cv2
     except ImportError:
-        missing.append("opencv-python (pip install opencv-python)")
-    try:
-        import anthropic
-    except ImportError:
-        missing.append("anthropic (pip install anthropic)")
+        try:
+            from PIL import Image  # Pillow fallback for frame reading
+        except ImportError:
+            missing.append("opencv-python  →  pip install opencv-python-headless")
+    # anthropic not required — visual analysis is done by Claude Code reading frames directly
 
-    if shutil.which("ffmpeg") is None:
-        missing.append("ffmpeg — download from https://ffmpeg.org/download.html and add to PATH")
+    if not FFMPEG_EXE:
+        missing.append("ffmpeg  →  winget install Gyan.FFmpeg  (then restart terminal)")
 
     if missing:
         print("\n  Missing dependencies:")
         for m in missing:
-            print(f"    pip install {m}" if "pip install" not in m else f"    {m}")
+            print(f"    {m}")
         sys.exit(1)
 
 
@@ -87,7 +122,7 @@ def extract_audio(video_path: str, out_dir: str) -> str:
     audio_path = os.path.join(out_dir, "audio.wav")
     print("  Extracting audio...")
     result = subprocess.run(
-        ["ffmpeg", "-i", video_path, "-vn", "-acodec", "pcm_s16le",
+        [FFMPEG_EXE, "-i", video_path, "-vn", "-acodec", "pcm_s16le",
          "-ar", "16000", "-ac", "1", audio_path, "-y"],
         capture_output=True, text=True
     )
@@ -107,8 +142,8 @@ FILLER_WORDS = {
 def transcribe(audio_path: str) -> dict:
     from faster_whisper import WhisperModel
 
-    print("  Transcribing (this takes 1-2 min on first run, model downloads ~150MB)...")
-    model = WhisperModel("base", device="cpu", compute_type="int8")
+    print("  Transcribing (first run downloads ~244MB for 'small' model)...")
+    model = WhisperModel("small", device="cpu", compute_type="int8")
 
     segments_raw, info = model.transcribe(
         audio_path,
@@ -221,157 +256,78 @@ def analyze_speech(data: dict) -> dict:
 
 # ── Step 5: Extract frames ───────────────────────────────────────────────────
 
+def _get_video_duration(video_path: str) -> float:
+    result = subprocess.run(
+        [FFMPEG_EXE, "-i", video_path],
+        capture_output=True, text=True
+    )
+    output = result.stderr
+    match = re.search(r"Duration:\s*(\d+):(\d+):(\d+\.\d+)", output)
+    if match:
+        h, m, s = int(match.group(1)), int(match.group(2)), float(match.group(3))
+        return h * 3600 + m * 60 + s
+    return 0.0
+
+
 def extract_frames(video_path: str, out_dir: str, interval_sec: int = 12) -> list:
-    import cv2
-
     print(f"  Extracting frames every {interval_sec}s...")
-    cap = cv2.VideoCapture(video_path)
-    fps = cap.get(cv2.CAP_PROP_FPS)
-    total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
-    duration = total_frames / fps if fps > 0 else 0
+    frames_dir = os.path.join(out_dir, "frames")
+    os.makedirs(frames_dir, exist_ok=True)
 
-    frame_paths = []
-    frame_interval = int(fps * interval_sec)
+    # Use ffmpeg to extract one frame every interval_sec seconds
+    frame_pattern = os.path.join(frames_dir, "frame_%04d.jpg")
+    result = subprocess.run(
+        [FFMPEG_EXE, "-i", video_path,
+         "-vf", f"fps=1/{interval_sec}",
+         "-q:v", "2",  # JPEG quality (2=high)
+         frame_pattern, "-y"],
+        capture_output=True, text=True
+    )
+    if result.returncode != 0:
+        raise RuntimeError(f"ffmpeg frame extraction failed:\n{result.stderr}")
 
-    frame_idx = 0
-    saved = 0
-    while True:
-        ret, frame = cap.read()
-        if not ret:
-            break
-        if frame_idx % frame_interval == 0:
-            timestamp = frame_idx / fps if fps > 0 else 0
-            fname = os.path.join(out_dir, f"frame_{saved:03d}_{fmt_time(timestamp).replace(':', '_')}.jpg")
-            cv2.imwrite(fname, frame)
-            frame_paths.append({"path": fname, "timestamp": fmt_time(timestamp)})
-            saved += 1
-        frame_idx += 1
+    # Collect frames and assign timestamps
+    frame_files = sorted(Path(frames_dir).glob("frame_*.jpg"))
+    duration = _get_video_duration(video_path)
 
-    cap.release()
-    print(f"  Extracted {saved} frames from {fmt_time(duration)} video.")
-    return frame_paths
-
-
-# ── Step 6: Visual analysis via Claude Vision ────────────────────────────────
-
-VISUAL_PROMPT = """You are a presentation coach reviewing a frame from someone's Loom video proposal.
-
-Analyze this frame across these dimensions:
-
-1. EYE CONTACT — are they looking at the camera/lens, or at their screen? Rate: direct / intermittent / avoiding
-2. FRAMING — how are they positioned? Rate: centered / too close / too far / off-center / face cut off
-3. POSTURE — body language. Rate: upright and confident / slouching / leaning / stiff / relaxed
-4. LIGHTING — quality of light on their face. Rate: well lit / backlit / harsh / uneven / dark
-5. ENERGY — do they look engaged or flat? Rate: engaged / neutral / flat / nervous
-6. SCREEN VISIBLE — if they're screencasting, is the screen readable? Rate: clear / small / unreadable / not applicable
-
-Output a JSON object like this (no markdown, raw JSON only):
-{
-  "eye_contact": "direct",
-  "framing": "slightly off-center",
-  "posture": "upright",
-  "lighting": "well lit",
-  "energy": "engaged",
-  "screen_visible": "clear",
-  "flag": null
-}
-
-For "flag": if there is one specific thing to fix in this frame, write a short sentence. Otherwise null.
-Only flag things that would actually matter to a client watching this video."""
-
-
-def analyze_frames(frame_data: list) -> list:
-    import anthropic
-
-    api_key = os.environ.get("ANTHROPIC_API_KEY")
-    if not api_key:
-        dotenv_path = Path(__file__).parent.parent / ".env"
-        if dotenv_path.exists():
-            for line in dotenv_path.read_text().splitlines():
-                if line.startswith("ANTHROPIC_API_KEY="):
-                    api_key = line.split("=", 1)[1].strip().strip('"')
-                    break
-
-    client = anthropic.Anthropic(api_key=api_key)
-    results = []
-
-    print(f"  Analyzing {len(frame_data)} frames with Claude Vision...")
-    for i, fd in enumerate(frame_data):
-        with open(fd["path"], "rb") as f:
-            img_b64 = base64.standard_b64encode(f.read()).decode()
-
-        try:
-            resp = client.messages.create(
-                model="claude-haiku-4-5-20251001",
-                max_tokens=300,
-                messages=[{
-                    "role": "user",
-                    "content": [
-                        {
-                            "type": "image",
-                            "source": {
-                                "type": "base64",
-                                "media_type": "image/jpeg",
-                                "data": img_b64,
-                            },
-                        },
-                        {"type": "text", "text": VISUAL_PROMPT},
-                    ],
-                }],
-            )
-            raw = resp.content[0].text.strip()
-            # Strip markdown code blocks if present
-            raw = re.sub(r"^```[a-z]*\n?", "", raw)
-            raw = re.sub(r"\n?```$", "", raw)
-            analysis = json.loads(raw)
-        except Exception as e:
-            analysis = {"error": str(e)}
-
-        results.append({
-            "timestamp": fd["timestamp"],
-            "path": fd["path"],
-            **analysis,
+    frame_data = []
+    for i, fpath in enumerate(frame_files):
+        timestamp_sec = i * interval_sec
+        frame_data.append({
+            "path": str(fpath),
+            "timestamp": fmt_time(timestamp_sec),
         })
-        sys.stdout.write(f"    frame {i+1}/{len(frame_data)} done\r")
-        sys.stdout.flush()
 
-    print()
-    return results
+    print(f"  Extracted {len(frame_data)} frames from {fmt_time(duration)} video.")
+    return frame_data
+
+
+# ── Step 6: Save frames for Claude Code visual analysis ──────────────────────
+# Visual coaching is done by Claude Code reading the saved frames directly —
+# no external API key needed.
+
+def save_frames(frame_data: list, output_dir: str) -> list:
+    """Copy extracted frames to a persistent output directory."""
+    frames_out = Path(output_dir) / "frames"
+    frames_out.mkdir(parents=True, exist_ok=True)
+
+    saved = []
+    for fd in frame_data:
+        src = Path(fd["path"])
+        dst = frames_out / src.name
+        shutil.copy2(src, dst)
+        saved.append({"path": str(dst), "timestamp": fd["timestamp"]})
+
+    print(f"  Frames saved to {frames_out} for visual review.")
+    return saved
 
 
 # ── Step 7: Generate report ──────────────────────────────────────────────────
 
-def generate_report(url: str, speech: dict, visuals: list) -> str:
+def generate_report(url: str, speech: dict, frames: list) -> str:
     date = datetime.now().strftime("%Y-%m-%d")
 
-    # Aggregate visual metrics
-    eye_counts = {}
-    framing_counts = {}
-    posture_counts = {}
-    lighting_counts = {}
-    energy_counts = {}
-    flags = []
-
-    for v in visuals:
-        for key, counter in [
-            ("eye_contact", eye_counts),
-            ("framing", framing_counts),
-            ("posture", posture_counts),
-            ("lighting", lighting_counts),
-            ("energy", energy_counts),
-        ]:
-            val = v.get(key, "unknown")
-            counter[val] = counter.get(val, 0) + 1
-        if v.get("flag"):
-            flags.append(f"  [{v['timestamp']}] {v['flag']}")
-
-    def dominant(counter):
-        if not counter:
-            return "unknown"
-        return max(counter, key=counter.get)
-
     # Build filler word string
-    filler_str = ""
     if speech["fillers"]:
         filler_str = "  " + ", ".join(f'"{w}" x{c}' for w, c in
                                        sorted(speech["fillers"].items(), key=lambda x: -x[1]))
@@ -379,7 +335,6 @@ def generate_report(url: str, speech: dict, visuals: list) -> str:
         filler_str = "  None detected."
 
     # Build pause string
-    pause_str = ""
     if speech["pauses"]:
         pause_str = "\n".join(
             f"  [{p['at']}] {p['duration']}s pause (after \"{p['before']}\")"
@@ -398,21 +353,7 @@ def generate_report(url: str, speech: dict, visuals: list) -> str:
         for s in speech["slow_segments"]
     ) or "  None."
 
-    # Frame-by-frame visual table
-    frame_table = ""
-    for v in visuals:
-        flag_note = f" — {v['flag']}" if v.get("flag") else ""
-        frame_table += (
-            f"  [{v['timestamp']}] "
-            f"eyes:{v.get('eye_contact','?')} | "
-            f"frame:{v.get('framing','?')} | "
-            f"posture:{v.get('posture','?')} | "
-            f"light:{v.get('lighting','?')} | "
-            f"energy:{v.get('energy','?')}"
-            f"{flag_note}\n"
-        )
-
-    # Verdict
+    # Speech verdict
     issues = []
     if speech["wpm"] > 175:
         issues.append("Speaking too fast — slow down, especially in the diagnosis section.")
@@ -422,20 +363,15 @@ def generate_report(url: str, speech: dict, visuals: list) -> str:
         top_filler = max(speech["fillers"], key=speech["fillers"].get)
         issues.append(f"Filler words ({speech['filler_total']} total) — especially \"{top_filler}\". Pause instead.")
     if len(speech["pauses"]) > 4:
-        issues.append(f"{len(speech['pauses'])} long pauses detected — some are fine, but too many break momentum.")
-    if dominant(eye_counts) not in ("direct", "intermittent"):
-        issues.append("Eye contact is weak — look at the camera lens, not the screen or your notes.")
-    if dominant(framing_counts) not in ("centered",):
-        issues.append(f"Framing: {dominant(framing_counts)} — reposition your camera.")
-    if dominant(lighting_counts) in ("backlit", "dark"):
-        issues.append(f"Lighting: {dominant(lighting_counts)} — fix your light source before rerecording.")
-    if dominant(energy_counts) in ("flat", "neutral"):
-        issues.append("Energy reads as flat — add more vocal variation, especially on key points.")
+        issues.append(f"{len(speech['pauses'])} long pauses — some are fine, but too many break momentum.")
 
-    if not issues:
-        verdict = "No major issues. Clean recording, send it."
-    else:
-        verdict = "\n".join(f"  {i+1}. {issue}" for i, issue in enumerate(issues))
+    speech_verdict = "\n".join(f"  {i+1}. {issue}" for i, issue in enumerate(issues)) if issues else "  Speech metrics look clean."
+
+    # Frame list for visual review
+    frame_list = "\n".join(
+        f"  [{fd['timestamp']}] {fd['path']}"
+        for fd in frames
+    )
 
     report = f"""# Loom Coaching Report
 **Date:** {date}
@@ -464,24 +400,20 @@ SLOW SEGMENTS (<90 WPM — pick up the pace)
 
 ---
 
-## VISUAL ANALYSIS
+## SPEECH VERDICT
 
-  Eye contact:   {dominant(eye_counts)}
-  Framing:       {dominant(framing_counts)}
-  Posture:       {dominant(posture_counts)}
-  Lighting:      {dominant(lighting_counts)}
-  Energy:        {dominant(energy_counts)}
-
-FRAME BY FRAME
-{frame_table}
-FLAGS TO FIX
-{chr(10).join(flags) if flags else "  None."}
+{speech_verdict}
 
 ---
 
-## VERDICT
+## VISUAL ANALYSIS
 
-{verdict}
+Frames extracted every 12s. Run `/loom-review` then ask Claude Code to analyze the frames below.
+
+FRAMES FOR REVIEW
+{frame_list}
+
+(Claude Code reads these images directly — ask: "analyze the frames from the last loom-review")
 
 ---
 
@@ -520,10 +452,13 @@ def main():
         speech = analyze_speech(transcript_data)
 
         frame_data = extract_frames(video_path, tmp, args.frame_interval)
-        visuals = analyze_frames(frame_data)
+
+        # Save frames to persistent location (next to the report) for visual review
+        report_dir = str(Path(output_path).parent)
+        frames = save_frames(frame_data, report_dir)
 
         print("  Generating report...")
-        report = generate_report(args.url, speech, visuals)
+        report = generate_report(args.url, speech, frames)
 
         Path(output_path).write_text(report, encoding="utf-8")
         print(f"\n  Report saved: {output_path}")
@@ -531,7 +466,9 @@ def main():
         print(f"  WPM: {speech['wpm']} ({speech['wpm_verdict']})")
         print(f"  Fillers: {speech['filler_total']}")
         print(f"  Pauses: {len(speech['pauses'])}")
+        print(f"  Frames: {len(frames)} saved to {report_dir}/frames/")
         print(f"{'='*60}\n")
+        print("  Next: ask Claude Code to analyze the frames for visual coaching.")
 
     return output_path
 
