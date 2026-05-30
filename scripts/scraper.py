@@ -381,20 +381,38 @@ def _parse_text(text: str, url: str) -> dict:
                 break
 
     # --- Budget ---
-    # Multi-line Upwork format: "$25.00\n-\n$47.00\nHourly"
+    # Strategy: detect explicit "Fixed" or "fixed-price" language FIRST.
+    # The client stats section always contains an avg hourly rate paid (e.g. "$41.96/hr")
+    # which would falsely classify a fixed-price job as hourly if hourly_m runs first.
+    # Rule: if the page contains "Fixed" near a price, that wins. Hourly only when no fixed signal.
+
+    fixed_keyword = bool(re.search(r"\b[Ff]ixed[\s-]?[Pp]rice\b|\b[Ff]ixed\b", full))
+
+    # Budget section hourly — must appear near "Budget" or "Hourly" heading, not client stats
+    # We split the text at "About the client" to avoid matching client's avg hourly rate
+    job_section = re.split(r"About the [Cc]lient|Client [Ii]nfo|Member [Ss]ince", full)[0]
+
     multiline_hourly = re.search(
         r"\$\s*([\d,.]+)\s*\n-\n\$\s*([\d,.]+)\s*\n[Hh]ourly",
-        full
+        job_section
     )
     hourly_m = (multiline_hourly
-                or re.search(r"\$\s*([\d,.]+)\s*[-–]\s*\$\s*([\d,.]+)\s*/\s*hr", full, re.I)
-                or re.search(r"\$\s*([\d,.]+)\s*/\s*hr", full, re.I))
+                or re.search(r"\$\s*([\d,.]+)\s*[-–]\s*\$\s*([\d,.]+)\s*/\s*hr", job_section, re.I)
+                or re.search(r"\$\s*([\d,.]+)\s*/\s*hr", job_section, re.I))
+
     fixed_m  = (re.search(r"\$\s*([\d,]+)\s*[-–]\s*\$\s*([\d,]+)", full)
                 or re.search(r"[Ff]ixed.{0,30}\$\s*([\d,]+)", full)
                 or re.search(r"\$\s*([\d,]+)\s+[Ff]ixed", full))
     budget_m = re.search(r"[Bb]udget\s*\n\s*\$\s*([\d,]+)\s*[-–]?\s*\$?\s*([\d,]*)", full)
 
-    if hourly_m:
+    if fixed_keyword and (fixed_m or budget_m):
+        # Explicit fixed-price job — don't let client's avg hourly rate confuse this
+        job["job_type"] = "fixed"
+        src = fixed_m or budget_m
+        nums = [float(n.replace(",","")) for n in src.groups() if n]
+        job["budget_min"] = nums[0]
+        job["budget_max"] = nums[1] if len(nums) > 1 else nums[0]
+    elif hourly_m and not fixed_keyword:
         job["job_type"] = "hourly"
         nums = [float(n.replace(",","")) for n in hourly_m.groups() if n]
         job["hourly_rate_min"] = nums[0]
@@ -409,6 +427,12 @@ def _parse_text(text: str, url: str) -> dict:
         nums = [float(n.replace(",","")) for n in budget_m.groups() if n]
         job["budget_min"] = nums[0]
         job["budget_max"] = nums[1] if len(nums) > 1 else nums[0]
+    elif hourly_m:
+        # Hourly fallback even if fixed keyword not found
+        job["job_type"] = "hourly"
+        nums = [float(n.replace(",","")) for n in hourly_m.groups() if n]
+        job["hourly_rate_min"] = nums[0]
+        job["hourly_rate_max"] = nums[1] if len(nums) > 1 else nums[0]
     else:
         job["job_type"] = "unknown"
 
@@ -457,9 +481,9 @@ def _parse_text(text: str, url: str) -> dict:
     if country_m:
         client["country"] = country_m.group(1).strip()
 
-    spent_m = (re.search(r"(\$[\d,]+[KkMm]?\+?)\s*total spent", full, re.I)
-               or re.search(r"\$\s*([\d,]+[KkMm]?\+?)\s+[Ss]pent", full)
-               or re.search(r"[Ss]pent[:\s]+\$\s*([\d,]+[KkMm]?)", full))
+    spent_m = (re.search(r"(\$[\d,.]+[KkMm]?\+?)\s*total spent", full, re.I)
+               or re.search(r"\$\s*([\d,.]+[KkMm]?\+?)\s+[Ss]pent", full)
+               or re.search(r"[Ss]pent[:\s]+\$\s*([\d,.]+[KkMm]?)", full))
     if spent_m:
         client["total_spend_usd"] = _parse_spend(spent_m.group(1))
 

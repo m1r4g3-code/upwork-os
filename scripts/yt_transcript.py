@@ -4,17 +4,21 @@ Fetch a YouTube transcript and save it to sources/transcripts/.
 Usage:
   python scripts/yt_transcript.py <youtube_url_or_video_id>
   python scripts/yt_transcript.py <url> --cookies cookies.txt
+  python scripts/yt_transcript.py <url> --cookies data/Yt_cookies.json
 
-If YouTube blocks your IP (RequestBlocked error), export your cookies:
-  1. Install browser extension "Get cookies.txt LOCALLY" (Chrome/Firefox)
-  2. Go to youtube.com while logged in
-  3. Click the extension -> Export -> save as cookies.txt in the project root
-  4. Re-run (auto-detected) or pass --cookies path/to/cookies.txt
+Cookie formats supported:
+  - Netscape cookies.txt (from "Get cookies.txt LOCALLY" extension)
+  - JSON array (from most browser cookie export extensions)
+
+Auto-detected cookie files (in order):
+  1. data/Yt_cookies.json
+  2. cookies.txt (project root)
 
 Output: sources/transcripts/<video_id>.txt
 """
 
 import sys
+import json
 import re
 import http.cookiejar
 import requests
@@ -24,7 +28,8 @@ from youtube_transcript_api._errors import TranscriptsDisabled, NoTranscriptFoun
 
 ROOT = Path(__file__).parent.parent
 OUT_DIR = ROOT / "sources" / "transcripts"
-DEFAULT_COOKIES = ROOT / "cookies.txt"
+DEFAULT_COOKIES_JSON = ROOT / "data" / "Yt_cookies.json"
+DEFAULT_COOKIES_TXT  = ROOT / "cookies.txt"
 
 
 def extract_video_id(url_or_id: str) -> str:
@@ -41,11 +46,35 @@ def extract_video_id(url_or_id: str) -> str:
 
 
 def _make_session(cookies_path: Path) -> requests.Session:
+    session = requests.Session()
+
+    # JSON format (from browser extension exports like EditThisCookie, Cookie-Editor JSON)
+    if cookies_path.suffix.lower() == ".json":
+        with open(cookies_path, encoding="utf-8") as f:
+            raw = json.load(f)
+        for c in raw:
+            name  = c.get("name", "")
+            value = c.get("value", "")
+            domain = c.get("domain", "")
+            if name and value:
+                session.cookies.set(name, value, domain=domain)
+        print(f"Loaded {len(raw)} cookies from JSON: {cookies_path.name}")
+        return session
+
+    # Netscape format (from "Get cookies.txt LOCALLY" extension)
     jar = http.cookiejar.MozillaCookieJar()
     jar.load(str(cookies_path), ignore_discard=True, ignore_expires=True)
-    session = requests.Session()
     session.cookies = jar
+    print(f"Loaded cookies from Netscape file: {cookies_path.name}")
     return session
+
+
+def _find_default_cookies() -> Path | None:
+    if DEFAULT_COOKIES_JSON.exists():
+        return DEFAULT_COOKIES_JSON
+    if DEFAULT_COOKIES_TXT.exists():
+        return DEFAULT_COOKIES_TXT
+    return None
 
 
 def fetch_transcript(video_id: str, cookies_path: Path = None) -> str:
@@ -79,8 +108,8 @@ def main():
         idx = args.index("--cookies")
         cookies_path = Path(args[idx + 1])
         args = [a for a in args if a not in ("--cookies", str(cookies_path))]
-    elif DEFAULT_COOKIES.exists():
-        cookies_path = DEFAULT_COOKIES
+    else:
+        cookies_path = _find_default_cookies()
 
     raw = args[0]
     video_id = extract_video_id(raw)
