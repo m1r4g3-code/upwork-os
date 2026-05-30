@@ -68,6 +68,7 @@ Python mechanical arms. Claude calls these. They do I/O. Claude does judgment.
 | `vault.py` | Brain read/write — create/update nodes, git sync |
 | `scraper.py` | Playwright Upwork scraper — job pages + client profiles → structured JSON |
 | `analytics.py` | SQLite performance tracker — proposal log, outcome log, weekly reports |
+| `loom_coach.py` | Loom video coaching — WPM, filler words, pauses, pace variation + frame extraction for visual review |
 
 ### The Engine (`CLAUDE.md`)
 
@@ -146,6 +147,7 @@ Claude reads `CLAUDE.md` automatically and initializes as the Upwork OS engine.
 | `/profile-audit` | Weighted profile audit across 7 sections — exact text recommendations |
 | `/project-radar` | Rank highest-ROI portfolio projects to build next |
 | `/reputation-brief` | Weekly — profile gaps, case studies, content ideas |
+| `/loom-review [url]` | Pre-send Loom coaching — speech pace, filler words, pauses + visual analysis of extracted frames |
 
 ---
 
@@ -167,6 +169,37 @@ Beyond the basic banned-words filter, the proposal pipeline now audits for 12 la
 12. **Register drift count** — minimum 2 register shifts per proposal (not 1)
 
 Every proposal runs through this gate before output. Drafts that fail any layer get rewritten until they pass.
+
+---
+
+## Loom Coach — Pre-Send Video QA
+
+Every Loom goes through `/loom-review` before sending. The tool runs a full automated analysis then Claude Code handles visual coaching directly in-conversation.
+
+**Pipeline:**
+```
+1. yt-dlp        downloads the Loom video
+2. ffmpeg         extracts 16kHz mono audio
+3. faster-whisper transcribes with word-level timestamps (small model)
+4. Speech metrics  WPM, filler words, long pauses, fast/slow segments
+5. ffmpeg         extracts one frame every 12 seconds
+6. Claude Code    reads frames directly — eye contact, framing, lighting, energy
+```
+
+**What gets flagged:**
+- Pace (target 130–160 WPM) — overall and per-segment
+- Filler words ("um", "like", "you know", "kind of", etc.)
+- Long pauses 1.5s+ — timestamped
+- Burst segments >180 WPM — where to slow down
+- Eye contact, framing, lighting, energy — from extracted frames
+
+**Usage:**
+```bash
+python scripts/loom_coach.py <loom_url>
+python scripts/loom_coach.py <loom_url> --output outputs/roasts/YYYY-MM-DD-slug.md
+```
+
+**Dependencies:** `faster-whisper`, `yt-dlp`, `ffmpeg` (auto-detected from WinGet install, no PATH required)
 
 ---
 
@@ -264,7 +297,8 @@ Upwork OS/
 │   ├── voice.py               Proposal voice calibrator
 │   ├── vault.py               Brain read/write
 │   ├── scraper.py             Upwork scraper (Playwright)
-│   └── analytics.py           Performance database
+│   ├── analytics.py           Performance database
+│   └── loom_coach.py          Loom video coaching (speech + frame extraction)
 ├── hephzibah-brain-temp/      Shared brain (separate git repo)
 │   └── upwork/                This OS's memory domain (22 nodes)
 ├── sources/                   Raw inputs — gitignored
