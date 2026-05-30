@@ -145,6 +145,89 @@ Proposals must feel like an experienced person typed this after reading the job,
 
 ---
 
+**DEEP AI TELLS (the layers voice.py cannot catch — apply on every draft)**
+
+These are the patterns that survive every word-level filter but still scream AI. Audit for each before output.
+
+**1. Parallel construction count: MAX 1 per proposal**
+
+AI's deepest tell. Triplets and parallel lists are AI's natural rhythm. Humans use 0-1 in a 200-word message.
+
+Count every instance of: 3+ items in a row sharing the same grammatical structure, comma-separated lists of 3+, "X, Y, and Z" patterns.
+
+- AI: "retry logic, failure alerts, and logging" (triplet)
+- AI: "dedup before write, exponential backoff, AI confidence routing" (triplet)
+- AI: "different aspect ratios, different caption lengths, different hook styles" (triplet)
+- Human: pick the ONE most interesting thing and name it specifically. Drop the rest.
+
+If you have 2+ parallel lists, kill all but one. Replace the others with a single specific example or just delete.
+
+**2. No universal pattern openers**
+
+AI loves to open with "wisdom" — universal statements about how the world works. Real humans share a specific observation tied to something they actually saw.
+
+- AI: "Building an automation practice inside an existing business is harder than it looks."
+- AI: "Growing agencies usually never get around to building a system for content."
+- AI: "The workflows that impress in demos rarely survive actual client data."
+- Human: "Yeah, 'demos vs real client data' is the actual hard part." (quotes back THEIR language)
+- Human: "Most agency owners I've talked to skip the system part." (tied to lived experience)
+
+If a sentence takes the shape "[Group/Thing] usually [verb] [generalization]" it is AI explaining the world. Cut it.
+
+**3. No quotable sentences**
+
+AI writes sentences that belong on a LinkedIn carousel. Real proposals don't land aphorisms. Humans ramble toward a point and stop.
+
+- AI quotable: "The workflows that impress in demos rarely survive actual client data."
+- AI quotable: "Either it eats your time, or everything ends up inconsistent. Usually both."
+- Human: trails off mid-thought, fragments, never lands cleanly
+
+Test: would this sentence look good as a tweet or a quote graphic? If yes, cut it or bury it.
+
+**4. Register must drift 2+ times, not just 1**
+
+The "one casual aside" rule was the floor. The new floor is two register drifts minimum. AI maintains one register throughout. Humans hop between formal, casual, technical, casual within four sentences.
+
+Examples of register drift markers: "tbh", "honestly", "btw", "anyway", "weird", "whatever", "not great", "doesn't really matter", a sudden fragment, a sudden opinion, a sudden aside.
+
+If only one of these is present, add another.
+
+**5. Specific proof must include proper noun + number/date OR named operational detail**
+
+The biggest leak. "Built a content automation pipeline last year" is the AI's *idea* of specific proof. It has none of the texture of memory.
+
+A real proof has at least one of:
+- A proper noun (named client, named tool, named platform, named place)
+- A specific number you remember because it pissed you off (3 ghost renders, 147 leads in one spike, $4k overshoot)
+- A specific date or time marker ("after we went live", "last March", "third week in")
+- A specific failure that you remember the cause of, not just "we had issues"
+
+If the proof could have happened to anyone in any year doing any project, it is fake-specific.
+
+**6. Break the coherence chain**
+
+AI paragraphs cleanly develop one topic each. Para 1 = wisdom. Para 2 = proof. Para 3 = stack. Para 4 = response. This is presentation structure.
+
+Real humans jump. Drop one sentence per proposal that does NOT logically follow from the previous one. An off-topic opinion. A side note. A "btw" that breaks the flow. Examples:
+
+- "Client's still using it btw."
+- "Most people skip that part. Not great."
+- "The interesting one is X. Everyone else does Y, which is fine."
+
+One coherence break per proposal. Minimum.
+
+**7. No corporate-speak in casual wrapper**
+
+AI hides consultant language inside casual sentence structure. Watch for these:
+- "Error handling is built in from the start" → "I add retries before I ship"
+- "Designed for scale from day one" → cut entirely, never say this
+- "Production-ready out of the gate" → cut entirely
+- "End-to-end" / "best-in-class" / "from the ground up" → cut entirely
+
+A casual sentence wrapped around a consultant phrase is still consultant text.
+
+---
+
 ### Step 6 — Voice Check
 
 ```
@@ -165,9 +248,15 @@ Criteria that block output (must fix before saving):
 - Roast score below 7/10
 - Any AI slop word from the banned list present
 - Passive voice in more than one sentence
-- Zero casual asides (no "tbh", "honestly", "actually", "the weird part is")
+- Fewer than 2 register drifts (one casual aside is no longer enough)
 - Zero operational specificity (no failure, tradeoff, or unexpected detail mentioned)
 - Every paragraph is roughly the same length (AI cadence)
+- More than 1 parallel construction (triplets, 3+ item lists)
+- Any universal pattern opener ("X usually Y", "The Y that Z rarely W")
+- Any quotable / aphoristic sentence that could be a tweet
+- Proof point with no proper noun, no number, no date, no named failure
+- Zero coherence breaks (every sentence cleanly follows the previous)
+- Corporate-speak in casual wrapper ("built in from the start", "from day one", "end-to-end")
 
 Fix all blockers, then re-run the roast mentally. Only output when the proposal would score 7+.
 

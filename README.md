@@ -130,16 +130,43 @@ Claude reads `CLAUDE.md` automatically and initializes as the Upwork OS engine.
 | Command | When to use |
 |---|---|
 | `/job-qualify [url or paste]` | Evaluate any job — score, red flags, bid/skip decision |
-| `/write-proposal [job-file]` | Full 5-pass proposal pipeline for qualified jobs |
+| `/write-proposal [job-file]` | Full proposal pipeline with deep AI-tell audit (12-layer human realism check) |
+| `/roast-proposal [file]` | Brutal coaching — catches AI residue voice.py misses (parallel constructions, universal pattern openers, quotable-sentence tells, fake-specific proof, coherence over-binding, corporate-speak in casual wrapper) |
 | `/daily-brief` | Morning session start — pipeline status + top jobs |
 | `/client-intel [username]` | Deep-check a client's history before bidding |
-| `/roast-proposal [file]` | Brutal coaching on any sent or drafted proposal |
 | `/analyze-conversation [chat]` | Post-proposal Upwork chat analysis + next message |
 | `/prep-job [url]` | Full intel card before writing (for complex jobs) |
+| `/prep-call [job]` | Pre-call brief with kill shot + question stack + close script |
 | `/log-outcome [file] [result]` | Log reply/win/ghost — updates metrics + extracts learning |
 | `/niche-radar [niche]` | Market intelligence for current or target niche |
+| `/gap-audit` | Diagnose skip patterns + backed-off bids + root cause verdict + fix list |
 | `/strategy-review` | Weekly — what's working, what's not, what to change |
+| `/quote [project]` | Pricing calculator + 40/30/30 schedule + SOW investment block |
+| `/close-contract [client]` | Handoff sequence engineered for 9-10 private NPS |
+| `/profile-audit` | Weighted profile audit across 7 sections — exact text recommendations |
+| `/project-radar` | Rank highest-ROI portfolio projects to build next |
 | `/reputation-brief` | Weekly — profile gaps, case studies, content ideas |
+
+---
+
+## Human Realism — The Deep AI Tell System
+
+Beyond the basic banned-words filter, the proposal pipeline now audits for 12 layers of AI residue that survive word-level checks:
+
+1. **AI slop words** — corporate / fake-enthusiasm / resume / transition / vague filler
+2. **Big grammar** — passive voice, nominalizations, balanced SVO repetition
+3. **Structural tells** — same-length bullets, same-length paragraphs, neat wrap-ups
+4. **Missing human texture** — no casual aside, no fragment, no specific failure
+5. **Specificity failures** — claims that fit any project in any year
+6. **Parallel construction count** — max 1 triplet / 3+ item list per proposal
+7. **Universal pattern openers** — "X usually Y" / AI explaining the world
+8. **Quotable sentence tells** — sentences that belong on a LinkedIn carousel
+9. **Fake-specific proof** — proof without proper noun / number / date / named failure
+10. **Coherence over-binding** — every sentence cleanly follows the previous (zero jumps)
+11. **Corporate-speak in casual wrapper** — "built in from the start" / "from day one"
+12. **Register drift count** — minimum 2 register shifts per proposal (not 1)
+
+Every proposal runs through this gate before output. Drafts that fail any layer get rewritten until they pass.
 
 ---
 
@@ -211,12 +238,13 @@ git push origin main
 | Phase | What gets built | Status |
 |---|---|---|
 | 0 — Foundation | CLAUDE.md, scripts, brain domain, templates | ✓ Done |
-| 1 — Intelligence | Scraper setup, scoring calibration (10 jobs) | Next |
-| 2 — Proposals | Voice calibration, /write-proposal, /roast-proposal | Pending |
-| 3 — Daily Ops | Full daily cycle, outcome logging, metrics live | Pending |
-| 4 — Learning Loop | Pattern extraction, /strategy-review, insights.md | Pending |
-| 5 — Delivery OS | /analyze-conversation, client nodes, delivery planning | Pending |
-| 6 — Reputation | Case studies, profile optimization, content pipeline | Pending |
+| 1 — Intelligence | Scraper setup, scoring calibration | ✓ Done |
+| 2 — Proposals | Voice calibration, /write-proposal, /roast-proposal, 12-layer AI tell audit | ✓ Done |
+| 3 — Daily Ops | Full daily cycle, outcome logging, metrics live | In progress |
+| 4 — Learning Loop | Pattern extraction, /strategy-review, /gap-audit, insights.md | ✓ Done |
+| 5 — Delivery OS | /analyze-conversation, /prep-call, /close-contract, /quote | ✓ Done |
+| 6 — Reputation | /profile-audit, /project-radar, case study pipeline | ✓ Done |
+| 7 — Algorithm Reverse Engineering | Atomic Upwork mechanics, profile-gravity playbook, 90-day inbound plan | ✓ Done |
 
 ---
 
