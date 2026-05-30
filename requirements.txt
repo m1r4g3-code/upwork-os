@@ -10,3 +10,7 @@ browser-cookie3>=0.19.1
 pyperclip>=1.8.2
 curl-cffi>=0.6.0
 nodriver>=0.32
+# loom-review tool
+faster-whisper>=1.0.0
+opencv-python>=4.8.0
+yt-dlp>=2024.1.0
