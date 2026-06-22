@@ -444,7 +444,11 @@ def main():
         print(f"\n  Loom Coach starting...")
         print(f"  URL: {args.url}\n")
 
-        video_path = download_video(args.url, tmp)
+        local = Path(args.url)
+        if local.exists() and local.is_file():
+            video_path = str(local)
+        else:
+            video_path = download_video(args.url, tmp)
         audio_path = extract_audio(video_path, tmp)
 
         print("  Transcribing audio...")

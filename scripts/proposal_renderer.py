@@ -29,7 +29,7 @@ CSS = """
   --white:     #F8F4EC;
 }
 
-html { font-size: 10pt; }
+html { font-size: 11.5pt; }
 
 body {
   background: var(--bg);
@@ -103,7 +103,7 @@ body {
 
 .cover-title {
   font-family: 'Poppins', sans-serif;
-  font-size: 24pt;
+  font-size: 30pt;
   font-weight: 800;
   color: var(--white);
   line-height: 1.08;
@@ -212,7 +212,7 @@ body {
 
 .section > h2 {
   font-family: 'Poppins', sans-serif;
-  font-size: 15pt;
+  font-size: 18pt;
   font-weight: 800;
   line-height: 1.15;
   letter-spacing: -0.02em;
@@ -222,8 +222,8 @@ body {
 
 /* ─ BODY TYPE ─ */
 p {
-  font-size: 8.5pt;
-  line-height: 1.7;
+  font-size: 10pt;
+  line-height: 1.75;
   margin-bottom: 4mm;
   font-weight: 300;
 }
@@ -299,8 +299,8 @@ p strong { font-weight: 600; color: var(--ink); }
   color: var(--ink);
 }
 .step-desc {
-  font-size: 8.5pt;
-  line-height: 1.6;
+  font-size: 10pt;
+  line-height: 1.65;
   font-weight: 300;
   margin-bottom: 1.5mm;
 }
@@ -386,9 +386,9 @@ tbody td:first-child {
 .icon-amber  { background: #FBBF24; }
 .icon-teal   { background: #2DD4BF; }
 .dark-item-text {
-  font-size: 8pt;
+  font-size: 9.5pt;
   font-weight: 300;
-  line-height: 1.5;
+  line-height: 1.55;
   color: rgba(255,255,255,0.72);
 }
 .dark-item-text strong {
