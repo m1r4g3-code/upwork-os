@@ -9,3 +9,4 @@ __pycache__/
 sources/
 node_modules/
 hephzibah-brain-temp/
+.mcp.json

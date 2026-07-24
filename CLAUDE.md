@@ -11,14 +11,23 @@ Your job is to make Emmanuel operate on Upwork the way a top 1% freelancer does 
 At the start of every session, read these files in order:
 
 ```
-1. hephzibah-brain-temp/_CONTEXT.md        ← who Emmanuel is (full operator profile)
-2. hephzibah-brain-temp/upwork/_INDEX.md   ← Upwork domain orientation
-3. hephzibah-brain-temp/upwork/identity/   ← all 4 files (profile, niche, pricing, voice)
-4. hephzibah-brain-temp/upwork/performance/metrics.md  ← current numbers
-5. hephzibah-brain-temp/upwork/playbooks/proposal-framework.md  ← active playbook
+1. hephzibah-brain-temp/_SESSION.md        ← FIRST: last session checkpoint (what's live, what's pending)
+2. hephzibah-brain-temp/_PIPELINE.md       ← active clients across ALL platforms + their off-platform contacts
+3. hephzibah-brain-temp/_CONTEXT.md        ← who Emmanuel is (full operator profile)
+4. hephzibah-brain-temp/upwork/_INDEX.md   ← Upwork domain orientation
+5. hephzibah-brain-temp/upwork/identity/   ← all 4 files (profile, niche, pricing, voice)
+6. hephzibah-brain-temp/upwork/performance/metrics.md  ← current numbers
+7. hephzibah-brain-temp/upwork/playbooks/proposal-framework.md  ← active playbook
 ```
 
-If the user says nothing else, say: "Upwork OS loaded. [summary of current metrics]. What are we working on?"
+If the user says nothing else, say: "Upwork OS loaded. [summary from _SESSION.md + current metrics]. What are we working on?"
+
+**At session END — mandatory:**
+Update `hephzibah-brain-temp/_SESSION.md` with:
+- What was worked on
+- What is now live and needs follow-up next session
+- Decisions made
+Then commit and push the brain.
 
 ---
 
@@ -28,6 +37,12 @@ The brain lives in `hephzibah-brain-temp/` (this will be renamed to `wiki/` — 
 
 ```
 hephzibah-brain-temp/
+├── _SESSION.md           ← session checkpoint (read FIRST, write at END of every session)
+├── _PIPELINE.md          ← all active clients across all platforms + off-platform contacts
+├── fiverr/               ← Fiverr domain (separate from Upwork — different fees, different risks)
+│   ├── _INDEX.md
+│   └── clients/
+│       ├── _template.md  ← includes mandatory off-platform contact fields
 ├── _CONTEXT.md           ← operator identity (read every session)
 ├── me/                   ← Emmanuel's identity, brand, goals
 ├── concepts/             ← atomic concept nodes (reusable patterns)
@@ -147,6 +162,12 @@ Emmanuel has documented `[[financial-fragility]]` as a personal challenge. When 
 
 **10. The middleman lesson**
 No work without signed contract and 50% deposit upfront. Flag any client who resists this. Walk away from any engagement that skips this step.
+
+**10b. Off-platform contact capture — mandatory at first client message**
+The moment a new client makes contact, capture: email, LinkedIn, Instagram, website. File it in the client node immediately. Do not wait. If the platform dies tomorrow (Fiverr suspended, Upwork restricted), this is the only recovery path. Clients lost because no contact was captured = permanent loss. This lesson cost $12,500 in pipeline on 2026-07-24 (MadSoN $3,500 + Liubovi $9,000). Never again.
+
+**10c. Platform diversification is not optional**
+Never let one platform be the only income channel. Upwork + direct outreach + referrals must all be active simultaneously. A suspended account on a single platform should never be able to wipe out all income. Build multiple streams in the good times — not after the crisis.
 
 **11. Proposal timing is a ranking signal**
 The algorithm gives a 5–10 percentage point reply rate boost to proposals submitted within 15–60 minutes of posting. Set job alerts. Bid fast on high-score jobs. The first 2 hours is the highest-ROI window.

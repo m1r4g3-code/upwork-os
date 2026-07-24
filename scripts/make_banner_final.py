@@ -14,7 +14,7 @@ OUTPUT = os.path.join(SCRATCHPAD, "banner.gif")
 W, H  = 1500, 400
 BG    = (13, 17, 23)
 LEMON = (232, 255, 58)
-WHITE = (245, 245, 245)
+WHITE = (220, 210, 188)   # carton / warm cream (reduced)
 MUTED = (68, 68, 68)
 DARK  = (10, 10, 10)
 ACCENT= (120, 132, 30)
@@ -111,8 +111,8 @@ def draw_grid(draw, grid, ox, oy):
 def draw_text(draw, fb, fm, ft):
     draw.text((24, 24),  "m1r4g3-code",                                              font=ft, fill=MUTED)
     draw.text((22, 76),  "Hephzibah Ifeoluwa",                                       font=fb, fill=WHITE)
-    draw.text((25, 185), "AI Automation & Software Engineer",                         font=fm, fill=LEMON)
-    draw.text((26, 238), "n8n  ·  Claude API  ·  TypeScript  ·  Next.js  ·  Lagos, NG",
+    draw.text((25, 210), "AI Automation & Software Engineer",                         font=fm, fill=LEMON)
+    draw.text((26, 263), "n8n  ·  Claude API  ·  TypeScript  ·  Next.js  ·  Lagos, NG",
                                                                                       font=ft, fill=MUTED)
 
 # Layout

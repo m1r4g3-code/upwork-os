@@ -191,10 +191,17 @@ body {
 /* ── PIPELINE FLOW ── */
 .pipeline-flow {
   display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: 0;
-  flex-wrap: wrap;
+  gap: 4px;
   margin: 6mm 0;
+}
+.pipeline-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0;
+  flex-wrap: nowrap;
 }
 .pipeline-step {
   background: var(--dark);
@@ -558,11 +565,20 @@ def build_html(d: dict) -> str:
         elif kind == "pipeline":
             for para in sec.get("paragraphs", []):
                 body_html += f'<p>{para}</p>'
-            steps_html = ""
-            for s in sec.get("flow", []):
-                steps_html += f'<span class="pipeline-step">{s}</span><span class="pipeline-arrow">→</span>'
-            steps_html = steps_html.rstrip('<span class="pipeline-arrow">→</span>')
-            body_html += f'<div class="pipeline-flow">{steps_html}</div>'
+            flow = sec.get("flow", [])
+            row_size = 5
+            rows = [flow[i:i+row_size] for i in range(0, len(flow), row_size)]
+            rows_html = ""
+            for r_idx, row in enumerate(rows):
+                row_html = ""
+                for s_idx, s in enumerate(row):
+                    row_html += f'<span class="pipeline-step">{s}</span>'
+                    is_last_in_row = s_idx == len(row) - 1
+                    is_last_row = r_idx == len(rows) - 1
+                    if not (is_last_in_row and is_last_row):
+                        row_html += '<span class="pipeline-arrow">→</span>'
+                rows_html += f'<div class="pipeline-row">{row_html}</div>'
+            body_html += f'<div class="pipeline-flow">{rows_html}</div>'
             for para in sec.get("paragraphs_after", []):
                 body_html += f'<p>{para}</p>'
 

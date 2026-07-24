@@ -29,7 +29,12 @@ CSS = """
   --white:     #F8F4EC;
 }
 
-html { font-size: 11.5pt; }
+html {
+  font-size: 11.5pt;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+}
 
 body {
   background: var(--bg);
@@ -39,7 +44,10 @@ body {
   line-height: 1.65;
   -webkit-print-color-adjust: exact;
   print-color-adjust: exact;
-  width: 794px;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  overflow-x: hidden;
 }
 
 /* ─ TOP BAR (static — built into HTML, not Playwright header template) ─ */
@@ -800,15 +808,24 @@ def build_html(data):
         f'<ul class="requirements">{req_items}</ul>'
     )
 
+    freelancer = esc(data.get("freelancer_name", ""))
+    contact = esc(data.get("freelancer_contact", ""))
+    topbar_right = freelancer
+    if contact:
+        topbar_right += f" &nbsp;&middot;&nbsp; {contact}"
+    topbar_right += " &nbsp;&middot;&nbsp; Confidential"
     topbar = (
         '<div class="doc-topbar">'
         '<span class="doc-topbar-brand">Hephzibah</span>'
-        '<span class="doc-topbar-right">Emmanuel Adekoya &nbsp;&middot;&nbsp; adekoyaemmanuel15@gmail.com &nbsp;&middot;&nbsp; Confidential</span>'
+        f'<span class="doc-topbar-right">{topbar_right}</span>'
         '</div>'
     )
+    footer_left = freelancer
+    if contact:
+        footer_left += f" &nbsp;&middot;&nbsp; {contact}"
     footer = (
         '<div class="doc-footer">'
-        '<span>Emmanuel Adekoya &nbsp;&middot;&nbsp; adekoyaemmanuel15@gmail.com</span>'
+        f'<span>{footer_left}</span>'
         '<span>Confidential</span>'
         '</div>'
     )
@@ -846,9 +863,10 @@ def render_pdf(html: str, output_path: str):
             page = browser.new_page(viewport={"width": 794, "height": 1123})
             page.goto(
                 "file:///" + tmp.replace(os.sep, "/"),
-                wait_until="networkidle",
-                timeout=18000,
+                wait_until="domcontentloaded",
+                timeout=60000,
             )
+            page.wait_for_timeout(3000)
             height = page.evaluate("document.documentElement.scrollHeight")
             page.pdf(
                 path=output_path,
