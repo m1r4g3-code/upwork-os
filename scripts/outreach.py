@@ -177,7 +177,7 @@ def generate_subject(prospect: dict) -> str:
 
     # Pull first insight from notes for subject specificity
     first_line = notes.splitlines()[0].strip() if notes else ""
-    if first_line and len(first_line) < 60 and not first_line.lower().startswith(("hi ", "hey ", "hello ")):
+    if first_line and len(first_line) < 60 and not first_line.lower().startswith(("hi ", "hi,", "hey ", "hey,", "hello ", "hello,", "dear ")):
         return first_line
     if company:
         return f"Quick question — {company}"
@@ -189,7 +189,7 @@ def generate_subject(prospect: dict) -> str:
 def _notes_is_full_email(notes: str) -> bool:
     """Detect if outreach notes contain a pre-written email body (starts with a greeting)."""
     first = notes.strip().splitlines()[0].strip().lower() if notes.strip() else ""
-    return first.startswith(("hi ", "hey ", "hello ", "dear "))
+    return first.startswith(("hi ", "hi,", "hey ", "hey,", "hello ", "hello,", "dear "))
 
 
 def generate_body(prospect: dict) -> str:

@@ -346,16 +346,24 @@ def analyze_website_playwright(page, website: str, business_name: str) -> dict:
 
 
 def _extract_emails_from_content(html_text: str) -> list[str]:
-    """Extract real email addresses from HTML."""
+    """Extract real email addresses from HTML — strict filtering."""
     skip_domains = {
         "example.com","sentry.io","wixpress.com","shopify.com","w3.org",
         "schema.org","googleapis.com","gstatic.com","facebook.com","twitter.com",
         "instagram.com","linkedin.com","apple.com","google.com","amazon.com",
         "microsoft.com","cloudflare.com","jquery.com","unpkg.com","github.com",
         "youtube.com","tiktok.com","pinterest.com","yelp.com","tripadvisor.com",
+        "squarespace.com","webflow.io","template.index","myshopify.com",
     }
     skip_prefixes = ("noreply","no-reply","donotreply","mailer-daemon","postmaster",
                      "abuse","spam","webmaster","admin@","info@wp","privacy@")
+
+    # Real TLDs only — reject image extensions and fake TLDs
+    real_tlds = {
+        "com","net","org","io","co","us","uk","ca","au","de","fr","nl","se","no",
+        "shop","store","online","app","email","biz","info","pro","design","studio",
+        "agency","media","digital","brand","style","fashion","nyc","la","miami",
+    }
 
     raw = re.findall(r'mailto:([a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,})', html_text)
     raw += re.findall(r'\b([a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,})\b', html_text)
@@ -363,11 +371,34 @@ def _extract_emails_from_content(html_text: str) -> list[str]:
     seen, clean = set(), []
     for email in raw:
         email = email.lower().strip(".")
-        domain = email.split("@")[-1]
+        local, _, domain = email.partition("@")
+
+        # Must have a recognisable domain structure
+        if "." not in domain:
+            continue
+        tld = domain.rsplit(".", 1)[-1]
+
+        # Reject image file extensions and unknown TLDs
+        if tld in ("jpg","jpeg","png","gif","webp","svg","2x","ico","pdf","mp4","mov","zip"):
+            continue
+        if tld not in real_tlds:
+            continue
+
+        # Reject UUID-looking local parts (image CDN paths)
+        if re.search(r'[0-9a-f]{8}-[0-9a-f]{4}-', local):
+            continue
+
+        # Reject locals with path separators or dots that look like filenames
+        if "/" in local or "\\" in local:
+            continue
+        if re.search(r'\.(jpg|png|gif|webp|svg|2x|ico)$', local):
+            continue
+
         if domain in skip_domains:
             continue
         if any(email.startswith(p) for p in skip_prefixes):
             continue
+
         if email not in seen:
             seen.add(email)
             clean.append(email)
