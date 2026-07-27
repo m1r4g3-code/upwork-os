@@ -889,6 +889,47 @@ Freelancer-initiated contract endings = JSS negative regardless of reason.
 
 ---
 
+### `/outreach [prospect-slug or "all"]`
+**What it does:** Generate personalized cold emails to prospects and send via Gmail after Telegram approval.
+
+**Prospect nodes live in:** `hephzibah-brain-temp/outreach/prospects/`
+Each node contains: name, company, email, context (what they do), outreach notes (the specific angle).
+
+**What you do:**
+
+1. **Add a prospect node first** — copy `_template.md`, fill in name/email/context/outreach notes, save as `[firstname-company].md`, set `status: prospect`
+2. Run the appropriate command:
+```
+python scripts/outreach.py --scan                     # see full pipeline status
+python scripts/outreach.py --prospect [slug]          # queue one prospect
+python scripts/outreach.py --all                      # queue all 'prospect' state
+python scripts/outreach.py --follow-up                # queue 72h+ follow-ups
+python scripts/outreach.py --process-approvals        # send approved emails
+python scripts/outreach.py --dry-run --prospect [slug] # preview only
+```
+
+3. **Approval flow:** Telegram card arrives → Emmanuel reviews subject + body → tap ✅ Send → email goes from adekoyaemmanuel15@gmail.com → prospect node updated to `outreach_sent`
+
+4. **Reply detection:** `email_watcher.py` detects replies from known prospect emails → Telegram alert → run `/prep-call` if they want to meet
+
+**Prospect lifecycle:**
+```
+prospect → outreach_sent → replied → call_booked → converted
+                         → dead (no reply after 7d, auto-ghosted)
+```
+
+**What goes in Outreach Notes (the angle):**
+One sharp observation from their site/profile/LinkedIn. This becomes the email opener.
+- "Their Shopify store has 300+ products but no automated abandoned cart flow"
+- "Posted 3x/week on LinkedIn last month, stopped 6 weeks ago — team bandwidth issue"
+- "Agency website is doing manual client reporting — Loom + n8n can automate the whole thing"
+
+The more specific the angle, the higher the reply rate. Generic angles = spam folder.
+
+**Output:** Logs to `hephzibah-brain-temp/outreach/log.md` + prospect node updated.
+
+---
+
 ### `/reputation-brief`
 **What you do:**
 1. Read `upwork/identity/profile.md` — current profile state
@@ -1186,6 +1227,11 @@ Check logs when a task appears stuck: `Get-Content logs\emailwatcher.log -Tail 5
 | Check Telegram for follow-up approvals | `python scripts/follow_up.py --process-approvals` |
 | Register all Tier 3 daemons | `.\scripts\setup_scheduler.ps1` (Admin PowerShell) |
 | Remove all Tier 3 daemons | `.\scripts\setup_scheduler.ps1 -Uninstall` (Admin PowerShell) |
+| See outreach pipeline | `python scripts/outreach.py --scan` |
+| Queue outreach email | `python scripts/outreach.py --prospect [slug]` |
+| Queue all prospect emails | `python scripts/outreach.py --all` |
+| Queue follow-up emails | `python scripts/outreach.py --follow-up` |
+| Send approved outreach | `python scripts/outreach.py --process-approvals` |
 
 ---
 

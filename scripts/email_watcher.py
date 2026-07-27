@@ -35,7 +35,10 @@ STATE_FILE    = config.ROOT / "data" / "email_watcher_state.json"
 
 # ─── Gmail auth ───────────────────────────────────────────────────────────────
 
-SCOPES = ["https://www.googleapis.com/auth/gmail.readonly"]
+SCOPES = [
+    "https://www.googleapis.com/auth/gmail.readonly",
+    "https://www.googleapis.com/auth/gmail.send",
+]
 
 
 def _get_gmail_service():
@@ -56,6 +59,10 @@ def _get_gmail_service():
 
     if token_path.exists():
         creds = Credentials.from_authorized_user_file(str(token_path), SCOPES)
+        # If stored token has wrong scopes, discard it and re-auth
+        if creds and creds.scopes and not set(SCOPES).issubset(set(creds.scopes)):
+            creds = None
+            token_path.unlink(missing_ok=True)
 
     if not creds or not creds.valid:
         if creds and creds.expired and creds.refresh_token:
