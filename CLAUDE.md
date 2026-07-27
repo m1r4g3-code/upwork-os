@@ -889,6 +889,45 @@ Freelancer-initiated contract endings = JSS negative regardless of reason.
 
 ---
 
+### `/prospect [query]`
+**What it does:** Search Google Maps for businesses, extract emails from their websites, write personalized outreach, and fire the email engine automatically.
+
+**Requires:** `GOOGLE_MAPS_API_KEY` in config.py (Places API enabled on same Google Cloud project as Gmail).
+
+**Usage:**
+```
+python scripts/prospector.py --query "furniture stores Brooklyn NY" --limit 10
+python scripts/prospector.py --query "digital agencies Lagos Nigeria" --limit 20 --auto
+python scripts/prospector.py --query "shopify stores New York" --niche ecommerce --limit 15 --auto
+python scripts/prospector.py --query "law firms Chicago" --limit 5 --dry-run
+```
+
+**What it does per business:**
+1. Google Places Text Search → get name, website, phone, address
+2. Visit their website → extract email from mailto: links + contact pages
+3. Analyze site → detect tech stack (Shopify, WordPress, etc.) + missing systems (no chat, no booking, no email marketing)
+4. Write personalized email — AI-written if `ANTHROPIC_API_KEY` is set, template otherwise
+5. Create prospect node in `outreach/prospects/`
+6. Auto-send immediately if `--auto` flag used
+
+**Telegram:** Sends a summary on Telegram when done — how many sent, how many had no email.
+
+**`--auto` flag:** Sends emails immediately as each prospect is found. Without it, nodes are created and the outreach daemon picks them up on the next 6h cycle.
+
+**Email quality:**
+- With `ANTHROPIC_API_KEY`: Claude Haiku writes each email from the site context — genuinely personalized
+- Without: template-based, personalized with the top site observation
+
+**Setup (one-time):**
+```
+1. console.cloud.google.com → project starlit-ship-469523-d7
+2. APIs & Services → Enable APIs → search "Places API" → Enable
+3. Credentials → + CREATE CREDENTIALS → API Key → copy key
+4. Add to config.py: GOOGLE_MAPS_API_KEY = "your-key-here"
+```
+
+---
+
 ### `/outreach [prospect-slug or "all"]`
 **What it does:** Generate personalized cold emails to prospects and send via Gmail after Telegram approval.
 
@@ -1227,6 +1266,7 @@ Check logs when a task appears stuck: `Get-Content logs\emailwatcher.log -Tail 5
 | Check Telegram for follow-up approvals | `python scripts/follow_up.py --process-approvals` |
 | Register all Tier 3 daemons | `.\scripts\setup_scheduler.ps1` (Admin PowerShell) |
 | Remove all Tier 3 daemons | `.\scripts\setup_scheduler.ps1 -Uninstall` (Admin PowerShell) |
+| Prospect from Google Maps | `python scripts/prospector.py --query "..." --limit N --auto` |
 | See outreach pipeline | `python scripts/outreach.py --scan` |
 | Queue outreach email | `python scripts/outreach.py --prospect [slug]` |
 | Queue all prospect emails | `python scripts/outreach.py --all` |
