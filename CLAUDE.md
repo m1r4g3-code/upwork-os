@@ -12,22 +12,30 @@ At the start of every session, read these files in order:
 
 ```
 1. hephzibah-brain-temp/_SESSION.md        ← FIRST: last session checkpoint (what's live, what's pending)
-2. hephzibah-brain-temp/_PIPELINE.md       ← active clients across ALL platforms + their off-platform contacts
-3. hephzibah-brain-temp/_CONTEXT.md        ← who Emmanuel is (full operator profile)
-4. hephzibah-brain-temp/upwork/_INDEX.md   ← Upwork domain orientation
-5. hephzibah-brain-temp/upwork/identity/   ← all 4 files (profile, niche, pricing, voice)
-6. hephzibah-brain-temp/upwork/performance/metrics.md  ← current numbers
-7. hephzibah-brain-temp/upwork/playbooks/proposal-framework.md  ← active playbook
+2. hephzibah-brain-temp/_QUEUE.md          ← SECOND: priority queue (what needs to happen right now)
+3. hephzibah-brain-temp/_PIPELINE.md       ← active clients across ALL platforms + their off-platform contacts
+4. hephzibah-brain-temp/_CONTEXT.md        ← who Emmanuel is (full operator profile)
+5. hephzibah-brain-temp/upwork/_INDEX.md   ← Upwork domain orientation
+6. hephzibah-brain-temp/upwork/identity/   ← all 4 files (profile, niche, pricing, voice)
+7. hephzibah-brain-temp/upwork/performance/metrics.md  ← current numbers
+8. hephzibah-brain-temp/upwork/playbooks/proposal-framework.md  ← active playbook
 ```
 
-If the user says nothing else, say: "Upwork OS loaded. [summary from _SESSION.md + current metrics]. What are we working on?"
+**Immediately after reading files — run heartbeat:**
+```
+python scripts/heartbeat.py
+```
+Read the output. Surface the #1 action. Do not skip this step.
+
+If the user says nothing else, say: "Upwork OS loaded. [#1 action from heartbeat + top 3 queue items + current metrics]. What are we working on?"
 
 **At session END — mandatory:**
-Update `hephzibah-brain-temp/_SESSION.md` with:
-- What was worked on
-- What is now live and needs follow-up next session
-- Decisions made
-Then commit and push the brain.
+1. Update `hephzibah-brain-temp/_SESSION.md` with what was worked on, live items, decisions made
+2. Update `hephzibah-brain-temp/_QUEUE.md` — mark resolved items (`"state": "resolved"`), add any new items surfaced this session
+3. Commit and push the brain:
+```
+cd hephzibah-brain-temp && git add . && git commit -m "upwork: session [YYYY-MM-DD] — [1-line summary]" && git push
+```
 
 ---
 
@@ -600,6 +608,54 @@ Full Loom methodology: `playbooks/loom-strategy.md`
 
 ---
 
+### `/heartbeat`
+**When to run:** Automatically at every session start. Also run explicitly when Emmanuel asks "what's the state?" or "where are we?"
+
+**What you do:**
+```
+python scripts/heartbeat.py
+```
+
+Read the full output. Then:
+1. Surface the **#1 action** — the single highest-priority thing right now
+2. List top 3 queue items with their next actions
+3. Call out any proposal follow-ups overdue (72h+) or ghosts (7d+)
+4. Flag any LinkedIn post due today or overdue
+5. Flag any client in a stale state
+
+**Output is already formatted by the script.** Read it and surface it to Emmanuel without paraphrasing. Add strategic context where relevant (chess read on any client flag).
+
+**Flags the script cannot detect — check manually:**
+- Upwork notification bell (new message, contract update)
+- SERAMAN pipeline email inbox (any error or pending-approval emails)
+- Oba WhatsApp (any client updates passed through)
+
+---
+
+### `/pulse`
+**When to run:** When Emmanuel asks "how are we doing?", "what's the health?", or before any strategy review.
+
+**What you do:**
+```
+python scripts/pulse.py
+```
+
+For a specific section only:
+```
+python scripts/pulse.py --section pipeline
+python scripts/pulse.py --section proposals
+python scripts/pulse.py --section account
+python scripts/pulse.py --section queue
+```
+
+**Key diagnostics to call out from the output:**
+- View rate <30% → profile suppression. Fix profile before more proposals.
+- Reply rate <10% → proposal quality issue. Run `/roast-proposal` on recent sends.
+- Pipeline value = $0 → acquisition emergency. Run `/niche-radar` immediately.
+- Connects balance <20 → restrict to score 80+ bids only until replenished.
+
+---
+
 ### `/daily-brief`
 **What you do:**
 1. Read `upwork/performance/metrics.md` — current pipeline state
@@ -999,6 +1055,10 @@ Every proposal is a data point. The system gets smarter only if outcomes are log
 
 | Situation | Call |
 |---|---|
+| Session start (always) | `python scripts/heartbeat.py` |
+| Need system vitals | `python scripts/pulse.py` |
+| Need pipeline only | `python scripts/pulse.py --section pipeline` |
+| Need proposal metrics | `python scripts/pulse.py --section proposals` |
 | Have a job URL | `python scripts/scraper.py [url]` |
 | Have scraped JSON | `python scripts/qualify.py [json-path]` |
 | Have a proposal draft | `python scripts/voice.py "[draft-text]"` |
