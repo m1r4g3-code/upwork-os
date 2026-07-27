@@ -297,6 +297,9 @@ def run(args):
 
 
 def main():
+    # Force UTF-8 output on Windows
+    if hasattr(sys.stdout, "reconfigure"):
+        sys.stdout.reconfigure(encoding="utf-8")
     parser = argparse.ArgumentParser(description="Upwork OS Pulse — system vitals")
     parser.add_argument("--json", action="store_true", help="Output as JSON")
     parser.add_argument("--section", choices=["account", "pipeline", "proposals", "queue"],
