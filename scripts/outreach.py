@@ -169,11 +169,16 @@ def generate_subject(prospect: dict) -> str:
     role    = meta.get("role", "")
     notes   = prospect["notes"]
 
+    # If notes have a pre-written email body, skip using notes for subject
+    if notes and _notes_is_full_email(notes):
+        if company:
+            return f"Quick thing re: {company}"
+        return "Quick thing"
+
     # Pull first insight from notes for subject specificity
     first_line = notes.splitlines()[0].strip() if notes else ""
-
-    if first_line and len(first_line) < 60:
-        return first_line  # Use the outreach angle directly as subject if short
+    if first_line and len(first_line) < 60 and not first_line.lower().startswith(("hi ", "hey ", "hello ")):
+        return first_line
     if company:
         return f"Quick question — {company}"
     if role:
@@ -181,62 +186,55 @@ def generate_subject(prospect: dict) -> str:
     return "Quick question"
 
 
+def _notes_is_full_email(notes: str) -> bool:
+    """Detect if outreach notes contain a pre-written email body (starts with a greeting)."""
+    first = notes.strip().splitlines()[0].strip().lower() if notes.strip() else ""
+    return first.startswith(("hi ", "hey ", "hello ", "dear "))
+
+
 def generate_body(prospect: dict) -> str:
     """
     Generate personalized cold email body in Emmanuel's voice.
-    Draws from: prospect context, notes, company/role.
-
-    Voice rules:
-    - Direct, slightly senior
-    - Opens with THEIR situation, not "I"
-    - One specific observation
-    - One clear ask (reply or call)
-    - 80-120 words
-    - No AI slop
+    If Outreach Notes contain a pre-written email, use it verbatim.
+    Otherwise, build from context + notes angle.
     """
     meta    = prospect["meta"]
     name    = meta.get("name", "").split()[0].title()
     company = meta.get("company", "")
-    role    = meta.get("role", "")
     context = prospect["context"]
     notes   = prospect["notes"]
 
-    # Extract the core angle from outreach notes
+    # If notes contain a pre-written full email — use it verbatim
+    if notes and _notes_is_full_email(notes):
+        # Strip anything after a blank line followed by "## " (avoid including ## sections)
+        email_body = re.split(r"\n\n##\s", notes)[0].strip()
+        return email_body
+
+    # Otherwise build from angle
     angle = notes.strip() if notes else context.strip()
     angle_lines = [l.strip() for l in angle.splitlines() if l.strip()]
-
-    # Build the observation — first meaningful line from notes
-    observation = angle_lines[0] if angle_lines else f"the work you're doing at {company}"
-
-    # Build additional detail if available
-    detail = ""
-    if len(angle_lines) > 1:
-        detail = f"\n\n{angle_lines[1]}"
-
-    greeting   = f"Hey {name}," if name else "Hey,"
+    observation  = angle_lines[0] if angle_lines else f"the work you're doing at {company}"
+    detail       = f"\n\n{angle_lines[1]}" if len(angle_lines) > 1 else ""
+    greeting     = f"Hey {name}," if name else "Hey,"
     company_line = f" at {company}" if company else ""
 
-    body = (
-        f"{greeting}\n\n"
-        f"{observation}{detail}\n\n"
-        f"I help businesses{company_line} build the automation and content systems "
-        f"that handle the repetitive work — so the team can focus on what actually matters.\n\n"
-        f"Worth a quick call to see if there's a fit?\n\n"
-        f"Emmanuel"
-    )
-
-    # If context is rich, use it to override the generic middle section
     if len(context) > 50:
-        context_short = context[:200].strip()
-        body = (
+        return (
             f"{greeting}\n\n"
             f"{observation}\n\n"
-            f"{context_short}\n\n"
+            f"{context[:200].strip()}\n\n"
             f"Worth a quick call?\n\n"
             f"Emmanuel"
-        )
+        ).strip()
 
-    return body.strip()
+    return (
+        f"{greeting}\n\n"
+        f"{observation}{detail}\n\n"
+        f"I help businesses{company_line} build the systems that handle the repetitive work "
+        f"so the team can focus on what actually matters.\n\n"
+        f"Worth a quick call?\n\n"
+        f"Emmanuel"
+    ).strip()
 
 
 def generate_followup_body(prospect: dict) -> str:
@@ -474,6 +472,12 @@ def auto_send(prospect: dict, is_followup: bool = False, dry_run: bool = False) 
         print(f"[outreach] Skipping {prospect['slug']} — outreach notes empty (no angle to send)")
         return False
 
+    # Warn if prospect expects a different sender account
+    preferred_sender = meta.get("send_from", "")
+    sender_warning   = ""
+    if preferred_sender and preferred_sender != "adekoyaemmanuel15@gmail.com":
+        sender_warning = f"\n\n⚠️ <b>Note:</b> Prospect expects email from {preferred_sender} — sending from adekoyaemmanuel15@gmail.com instead."
+
     if is_followup:
         subject = f"Re: {generate_subject(prospect)}"
         body    = generate_followup_body(prospect)
@@ -500,6 +504,7 @@ def auto_send(prospect: dict, is_followup: bool = False, dry_run: bool = False) 
             f"📧 <b>Sent:</b> {name} &lt;{to_email}&gt;\n"
             f"<b>Subject:</b> {subject}\n\n"
             f"<pre>{body[:300]}</pre>"
+            f"{sender_warning}"
         )
         print(f"[outreach] Sent: {name} <{to_email}>")
     else:
