@@ -4,20 +4,23 @@ Upwork OS — Outreach Email Engine
 
 Reads prospect nodes from hephzibah-brain-temp/outreach/prospects/
 Generates personalized cold emails in Emmanuel's voice.
-Sends Telegram approval request with full email preview.
-On approval: sends via Gmail, logs the outreach, resets reply timer.
+AUTO mode: sends directly, notifies Emmanuel on Telegram after.
+APPROVAL mode: sends Telegram card first, Emmanuel taps Send.
 
 Prospect states:
   prospect → outreach_sent → replied → call_booked → converted
                            → dead (no reply after GHOST_DAYS)
 
 Usage:
-    python scripts/outreach.py --scan                      # show all ready prospects
-    python scripts/outreach.py --prospect [name-slug]      # queue one prospect
-    python scripts/outreach.py --all                       # queue all 'prospect' state
+    python scripts/outreach.py --scan                      # show full pipeline
+    python scripts/outreach.py --auto                      # auto-send all ready prospects (no approval)
+    python scripts/outreach.py --auto --prospect [slug]    # auto-send one prospect
+    python scripts/outreach.py --auto --follow-up          # auto-send all due follow-ups
+    python scripts/outreach.py --prospect [name-slug]      # queue for approval (one)
+    python scripts/outreach.py --all                       # queue all for approval
     python scripts/outreach.py --process-approvals         # send approved emails
-    python scripts/outreach.py --follow-up                 # queue follow-ups for sent emails
-    python scripts/outreach.py --dry-run --all             # preview without sending
+    python scripts/outreach.py --follow-up                 # queue follow-ups for approval
+    python scripts/outreach.py --dry-run --auto            # preview auto-send without sending
 """
 
 import sys
@@ -450,6 +453,95 @@ def run_followups(dry_run: bool = False) -> None:
         print(f"[outreach] No follow-ups due (threshold: {FOLLOWUP_HOURS}h)")
 
 
+def auto_send(prospect: dict, is_followup: bool = False, dry_run: bool = False) -> bool:
+    """
+    Send email immediately without approval gate.
+    Notifies Emmanuel on Telegram AFTER sending.
+    Safety gate: skip if outreach notes are empty (no real angle).
+    Returns True if sent.
+    """
+    from scripts.notify import send
+
+    meta    = prospect["meta"]
+    name    = meta.get("name", prospect["slug"])
+    to_email = meta.get("email", "")
+
+    if not to_email:
+        print(f"[outreach] Skipping {prospect['slug']} — no email address")
+        return False
+
+    if not is_followup and not prospect["notes"].strip():
+        print(f"[outreach] Skipping {prospect['slug']} — outreach notes empty (no angle to send)")
+        return False
+
+    if is_followup:
+        subject = f"Re: {generate_subject(prospect)}"
+        body    = generate_followup_body(prospect)
+    else:
+        subject = generate_subject(prospect)
+        body    = generate_body(prospect)
+
+    if dry_run:
+        print(f"\n[DRY RUN] Auto-send → {name} <{to_email}>")
+        print(f"Subject: {subject}\n---\n{body}\n---")
+        return True
+
+    success = send_email(to_email, subject, body)
+
+    if success:
+        today  = datetime.now().strftime("%Y-%m-%d")
+        status = "followup_sent" if is_followup else "outreach_sent"
+        _update_prospect_status(prospect["path"], status, {"outreach_sent_on": today})
+        _append_log_entry(prospect["path"], f"Auto-sent — '{subject}'")
+        _log_to_outreach_log(prospect, subject, body)
+        _brain_commit(f"outreach: auto-send — {prospect['slug']} ({status})")
+
+        send(
+            f"📧 <b>Sent:</b> {name} &lt;{to_email}&gt;\n"
+            f"<b>Subject:</b> {subject}\n\n"
+            f"<pre>{body[:300]}</pre>"
+        )
+        print(f"[outreach] Sent: {name} <{to_email}>")
+    else:
+        send(f"❌ <b>Send failed:</b> {prospect['slug']} — check Gmail")
+
+    return success
+
+
+def run_auto_all(dry_run: bool = False) -> None:
+    """Auto-send to all prospects in 'prospect' state with non-empty outreach notes."""
+    prospects = load_prospects(status_filter="prospect")
+    if not prospects:
+        print("[outreach] No prospects in 'prospect' state.")
+        return
+    sent = 0
+    for p in prospects:
+        if auto_send(p, dry_run=dry_run):
+            sent += 1
+    print(f"[outreach] Auto-send complete: {sent}/{len(prospects)} sent.")
+
+
+def run_auto_followups(dry_run: bool = False) -> None:
+    """Auto-send follow-ups for all outreach_sent prospects past 72h with no reply."""
+    prospects = load_prospects(status_filter="outreach_sent")
+    sent = 0
+    for p in prospects:
+        sent_on = p["meta"].get("outreach_sent_on")
+        if not sent_on:
+            continue
+        try:
+            sent_dt = datetime.strptime(sent_on, "%Y-%m-%d").replace(tzinfo=timezone.utc)
+            hours_since = (datetime.now(timezone.utc) - sent_dt).total_seconds() / 3600
+        except ValueError:
+            continue
+        if hours_since < FOLLOWUP_HOURS:
+            continue
+        if auto_send(p, is_followup=True, dry_run=dry_run):
+            sent += 1
+    if not sent:
+        print(f"[outreach] No follow-ups due (threshold: {FOLLOWUP_HOURS}h)")
+
+
 def scan_prospects_report() -> None:
     """Print a status report of all prospects."""
     all_statuses = ["prospect", "outreach_sent", "replied", "call_booked", "converted", "dead"]
@@ -480,12 +572,14 @@ def main():
     parser = argparse.ArgumentParser(description="Upwork OS Outreach Engine")
     parser.add_argument("--scan", action="store_true",
                         help="Print prospect pipeline status")
+    parser.add_argument("--auto", action="store_true",
+                        help="Auto-send without approval gate — notifies on Telegram after")
     parser.add_argument("--prospect", metavar="SLUG",
-                        help="Queue cold email for a specific prospect")
+                        help="Target a specific prospect (use with --auto or standalone for approval flow)")
     parser.add_argument("--all", action="store_true",
-                        help="Queue cold emails for all 'prospect' state nodes")
+                        help="Queue cold emails for all 'prospect' state nodes (approval flow)")
     parser.add_argument("--follow-up", action="store_true",
-                        help="Queue follow-ups for outreach_sent prospects past 72h")
+                        help="Run follow-ups — auto-send or queue for approval")
     parser.add_argument("--process-approvals", action="store_true",
                         help="Check Telegram for approved emails and send them")
     parser.add_argument("--dry-run", action="store_true",
@@ -500,6 +594,21 @@ def main():
         scan_prospects_report()
         return
 
+    # AUTO mode — no approval gate
+    if args.auto:
+        if args.follow_up:
+            run_auto_followups(dry_run=args.dry_run)
+        elif args.prospect:
+            p = load_prospect_by_slug(args.prospect)
+            if p:
+                auto_send(p, dry_run=args.dry_run)
+            else:
+                print(f"[outreach] Prospect not found: {args.prospect}")
+        else:
+            run_auto_all(dry_run=args.dry_run)
+        return
+
+    # APPROVAL mode — Telegram gate
     if args.follow_up:
         run_followups(dry_run=args.dry_run)
         return
