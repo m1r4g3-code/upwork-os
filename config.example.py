@@ -6,14 +6,6 @@
 # Get token from BotFather response
 TELEGRAM_BOT_TOKEN = "YOUR_BOT_TOKEN_HERE"
 
-# ── Google Maps / Places API ─────────────────────────────────────────────────
-# Same Google Cloud project as Gmail (starlit-ship-469523-d7)
-# 1. console.cloud.google.com → Select project → APIs & Services → Enable APIs
-# 2. Enable: "Places API" and "Maps JavaScript API"
-# 3. APIs & Services → Credentials → + CREATE CREDENTIALS → API Key
-# 4. Paste below. Free tier: $200/month credit (covers ~1,000 searches)
-GOOGLE_MAPS_API_KEY = ""
-
 # ── Anthropic API (optional) ─────────────────────────────────────────────────
 # If set, prospect emails are AI-written from website context (much better copy).
 # If blank, template-based emails are used instead.

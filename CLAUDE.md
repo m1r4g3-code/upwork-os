@@ -890,9 +890,7 @@ Freelancer-initiated contract endings = JSS negative regardless of reason.
 ---
 
 ### `/prospect [query]`
-**What it does:** Search Google Maps for businesses, extract emails from their websites, write personalized outreach, and fire the email engine automatically.
-
-**Requires:** `GOOGLE_MAPS_API_KEY` in config.py (Places API enabled on same Google Cloud project as Gmail).
+**What it does:** Search Google Maps for businesses using Playwright (no API key needed — the OS controls the browser), extract emails from their websites, write personalized outreach, and fire the email engine automatically.
 
 **Usage:**
 ```
@@ -920,11 +918,10 @@ python scripts/prospector.py --query "law firms Chicago" --limit 5 --dry-run
 
 **Setup (one-time):**
 ```
-1. console.cloud.google.com → project starlit-ship-469523-d7
-2. APIs & Services → Enable APIs → search "Places API" → Enable
-3. Credentials → + CREATE CREDENTIALS → API Key → copy key
-4. Add to config.py: GOOGLE_MAPS_API_KEY = "your-key-here"
+pip install playwright
+playwright install chromium
 ```
+No API key needed. Playwright opens a headless Chromium browser and interacts with Google Maps the same way a human would.
 
 ---
 

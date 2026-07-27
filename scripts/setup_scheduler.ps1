@@ -47,8 +47,11 @@ if ($Uninstall) {
     $tasks = @(
         "UpworkOS_EmailWatcher",
         "UpworkOS_ProcessApprovals",
+        "UpworkOS_ProcessFollowUpApprovals",
         "UpworkOS_FollowUp",
-        "UpworkOS_Heartbeat"
+        "UpworkOS_Heartbeat",
+        "UpworkOS_OutreachAuto",
+        "UpworkOS_OutreachFollowUp"
     )
     foreach ($task in $tasks) {
         if (Get-ScheduledTask -TaskName $task -TaskPath $TASK_PATH -ErrorAction SilentlyContinue) {
@@ -187,6 +190,24 @@ Register-ScheduledTask `
     -Force | Out-Null
 
 Write-Host "  Registered: UpworkOS_Heartbeat (logon + daily 8AM WAT)" -ForegroundColor Green
+
+# 5. Outreach Auto — every 6 hours (auto-send to all 'prospect' nodes)
+$TriggerOutreachAuto = New-ScheduledTaskTrigger -RepetitionInterval (New-TimeSpan -Hours 6) -Once -At ((Get-Date).AddMinutes(5))
+Register-OSTask `
+    -TaskName    "UpworkOS_OutreachAuto" `
+    -Script      "outreach.py" `
+    -Args        "--auto" `
+    -Trigger     $TriggerOutreachAuto `
+    -Description "Auto-sends personalized emails to all prospect-status nodes every 6 hours"
+
+# 6. Outreach Follow-Up — every 12 hours (follow-up to non-responders after 5 days)
+$TriggerOutreachFollowUp = New-ScheduledTaskTrigger -RepetitionInterval (New-TimeSpan -Hours 12) -Once -At ((Get-Date).AddMinutes(10))
+Register-OSTask `
+    -TaskName    "UpworkOS_OutreachFollowUp" `
+    -Script      "outreach.py" `
+    -Args        "--follow-up --auto" `
+    -Trigger     $TriggerOutreachFollowUp `
+    -Description "Auto-sends follow-up emails to non-responders (5+ days) every 12 hours"
 
 # ─── Summary ─────────────────────────────────────────────────────────────────
 
