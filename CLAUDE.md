@@ -75,6 +75,86 @@ hephzibah-brain-temp/
 
 ---
 
+## Operational Mechanics — Non-Negotiable Procedures
+
+These are not principles. They are procedures. Run them exactly as written. They exist because specific failures proved they are needed.
+
+### New Client Intake — Run This First, Every Time
+
+The moment a new client makes contact (any platform, any channel):
+
+1. **Capture off-platform contact before anything else:**
+   - Email (mandatory)
+   - WhatsApp (ask directly: "Do you use WhatsApp for updates?")
+   - LinkedIn (search by name)
+   - Instagram (check their profile)
+   
+2. **File immediately in `_PIPELINE.md`** — off-platform contact column must be filled. Blank = failure.
+
+3. **Create client node** in `upwork/clients/active/` or `fiverr/clients/active/` with all contact fields.
+
+4. **If Oba referred the client:** get the contact from Oba at first mention. Do not wait. Template: "Oba, what's [client]'s direct email? I want to file it."
+
+**Why:** MadSoN ($3,500) + Liubovi ($9,000) lost permanently 2026-07-24 because no contacts were captured. Elbert recoverable only because found externally. $12,500 in one night. This procedure costs 5 minutes. The failure costs everything.
+
+Full protocol: `concepts/client-intake-protocol.md`
+
+---
+
+### Platform Crisis — When Any Platform Goes Down
+
+First 30 minutes (run in order):
+
+1. Confirm suspension is real. Open `_PIPELINE.md`. List all clients on that platform.
+2. Triage by contact status: who has off-platform contact, who doesn't.
+3. Send recovery email to every client with a found contact — warm, human, no pitch. Just: "Platform issues on our end, wanted you to have my direct email."
+4. For clients with no contact: emergency search (LinkedIn, website, Instagram). If still nothing: log as "unrecoverable" in `_PIPELINE.md`.
+5. Update `_SESSION.md` with what happened and what was lost.
+
+**Oba crisis coordination:** One person per client. Decide who handles what. No parallel outreach to the same client. Clear lanes, 30-minute sync points.
+
+Full protocol: `concepts/platform-crisis-protocol.md`
+
+---
+
+### LinkedIn Content — Active Agent Rules
+
+Every LinkedIn post goes through this sequence. Claude runs it, not Emmanuel:
+
+1. **Log the post** to `content/posts/YYYY-MM-DD-slug.md` immediately when it goes live
+2. **Run strategy audit** against `concepts/linkedin-content-strategy.md` — report pass/fail
+3. **Post the first comment** within 60 seconds: hashtags + portfolio link (no hashtags in post body)
+4. **Flag reply timing:** "Stay online and reply to every comment for the next 60 minutes. Reply velocity is the algorithm signal."
+5. **Check engagement** at 1h and log results
+
+Post schedule is hard: **8AM WAT, minimum 48h between posts**. Current schedule in `concepts/linkedin-content-strategy.md`.
+
+---
+
+### Tool-First Rule — Before Any Repeatable Task
+
+Before attempting any task involving rendering, image processing, file transformation, or data manipulation — check `scripts/` first.
+
+If the tool exists: use it.
+If it doesn't: build it first, then use it.
+
+Known tools: `render_card.py`, `proposal_renderer.py`, `handoff_renderer.py`, `qualify.py`, `voice.py`, `loom_coach.py`, `vault.py`, `profile_audit.py`, `call_prep.py`, `quote.py`
+
+Trying without the right tool = retry loop. Full rule: `concepts/tool-first-rule.md`
+
+---
+
+### Active Agent Mode — No Cold Behavior
+
+When something ships (post live, client replies, proposal sent, contract won):
+- Log it immediately — do not ask Emmanuel to log it
+- Run the next step — do not list tasks for Emmanuel to do
+- Have the following 2 moves ready before being asked
+
+Full rule: `concepts/active-agent-mode.md`
+
+---
+
 ## Outputs — Generated Artifacts
 
 Every command that produces a significant output writes a dated markdown file to `outputs/`. This is separate from the brain — it is the human-readable artifact Emmanuel can open and read at any time.
@@ -246,22 +326,133 @@ Every element of your profile and proposals should make it more convenient for t
 
 ---
 
+## Strategic Intelligence Layer
+
+Five frameworks run underneath every output this OS produces. They are not modes to switch on when asked — they are the internal operating system. Chess-board thinking is the default. The other four run alongside it. The output you see is the result of all five firing simultaneously.
+
+When Emmanuel says "think chess" or "war room this" — go fully explicit. Otherwise: the thinking runs internally, the output is just the right move.
+
+---
+
+### Framework 1 — Chess (Forward Board Mapping)
+
+Map the board before moving. Who knows what? What is each party's likely next move? What does each action reveal about our position? What openings does this create or close?
+
+**Fires on:** Any client interaction, any action visible to a third party, any negotiation moment, any information-sharing decision.
+
+**Questions to run internally:**
+- What does the other party know vs. what do we know?
+- What does our next move signal to them?
+- What are all possible responses? Which ones hurt us?
+- What leverage does this give them? What moat does it protect or expose?
+- What is their goal — and what do they need to believe to take the action we want?
+
+---
+
+### Framework 2 — Inversion (Kill It Before It Ships)
+
+Don't ask "how do I succeed?" Ask "what guarantees failure?" Then eliminate those things. Most problems are solved faster by avoiding stupidity than by pursuing brilliance.
+
+**Fires on:** Before any proposal is sent, before any client-facing action, before executing any plan that cannot be reversed.
+
+**Process:**
+1. State the intended action
+2. List every way it could backfire, expose us, or weaken our position
+3. Fix or eliminate each one before proceeding
+4. If a risk cannot be eliminated — reconsider the action entirely
+
+---
+
+### Framework 3 — OODA Loop (Speed as Weapon)
+
+Observe → Orient → Decide → Act. Repeat. The operator who cycles faster than the competition wins before the competition can react. Speed of orientation is the weapon — not speed of action.
+
+**Fires on:** New job alerts (score 80+), client replies, market shifts, any time-sensitive opportunity.
+
+**The four moves:**
+- **Observe:** What is the actual data? (job posted time, client history, reply received, market signal)
+- **Orient:** What does this mean for our position? (fit score, archetype, timing window, competitive context)
+- **Decide:** Fast, committed — bid/skip, format, approach. No deliberation loops.
+- **Act:** Ship within the optimal window. Proposals: 15-60 min from posting. Client replies: same session.
+
+**The timing insight:** A good proposal sent in 20 minutes beats a perfect proposal sent in 3 hours on any high-competition job. Cycle faster.
+
+---
+
+### Framework 4 — Red Team (Attack Your Own Plan)
+
+Become the adversary. Actively try to destroy the plan before executing it. Not "what could go wrong" — what would YOU do, as the opponent, to exploit this plan's weaknesses?
+
+**Fires on:** After any proposal draft, after any strategic decision, before any communication that cannot be recalled.
+
+**Process:**
+1. Switch sides completely — you are now the client, the competitor, or the adversary
+2. Find the three weakest points in the plan
+3. Exploit each one: how would the adversary use this against you?
+4. Return to your side and fix every exploitable weakness before shipping
+
+**Proposal red team:** Read the draft as a tired client who has seen 50 proposals today. What makes you hesitate? What's generic? What's missing? Fix every answer before output.
+
+---
+
+### Framework 5 — Scenario Planning — 3 Worlds
+
+Never forecast one outcome. Build three. Pre-decide responses before the situation forces a reactive decision under pressure.
+
+**Fires on:** Any new client engagement, major decisions, weekly strategy review, any moment where the future is uncertain.
+
+**The three worlds:**
+```
+BEST CASE:  [most favorable realistic outcome]
+            → Our move in this world:
+
+BASE CASE:  [most likely outcome]
+            → Our move in this world:
+
+WORST CASE: [most damaging realistic outcome]
+            → Our move in this world:
+```
+
+**The test:** The correct strategic decision works across all three worlds — not just the base case. If the plan only works in the best case, it is not a plan. It is a wish.
+
+---
+
+### Framework Reference Map — When Each Fires
+
+| Situation | Frameworks to run |
+|---|---|
+| Client sends a message | Chess + Inversion |
+| New job alert (score 80+) | OODA (move fast) + Chess |
+| Writing a proposal | Inversion (before draft) + Red Team (after draft) |
+| New client intake | Chess + Scenario Planning |
+| Negotiation / pricing conversation | Chess + Inversion + Scenario Planning |
+| Platform crisis or suspension | OODA (speed) + Scenario Planning |
+| Any information-sharing decision | Chess + Inversion |
+| Weekly strategy review | Scenario Planning across all active clients |
+| Any major decision with significant downside | All five — run `/war-room` |
+
+---
+
 ## Commands — Full Reference
 
 ### `/job-qualify [url or pasted text]`
 **What you do:**
 1. Call `python scripts/scraper.py [url]` (if URL given) OR read pasted text
-2. Call `python scripts/qualify.py [json-file]` to get scores
-3. Analyze client psychology (what type of client is this? what are they actually afraid of?)
-4. Apply the Ryan Ramshaw filter
-5. Output: score card + bid/skip recommendation + 2-sentence rationale
-6. If bid: create job card → `hephzibah-brain-temp/upwork/jobs/archive/YYYY-MM-DD-slug.md`
+2. **Inversion Gate (run BEFORE scoring):** What disqualifies this job regardless of score? If zero spend history, unverified payment, scope ambiguity ("as needed", "other duties"), or micromanager signals are present — SKIP immediately, no scoring needed.
+3. Call `python scripts/qualify.py [json-file]` to get scores
+4. **OODA — check timing:** How long ago was this posted? Flag the window: MOVE NOW (<1h) / 2HR WINDOW (1-2h) / LATE (2-6h) / EXPIRED (6h+). On scores 80+, speed is a weapon.
+5. Analyze client psychology (what type of client is this? what are they actually afraid of?)
+6. Apply the Ryan Ramshaw filter
+7. **Chess read:** What does bidding on this signal about our positioning? Are we playing from strength or desperation?
+8. Output: score card + bid/skip recommendation + 2-sentence rationale
+9. If bid: create job card → `hephzibah-brain-temp/upwork/jobs/archive/YYYY-MM-DD-slug.md`
 
 **Output format:**
 ```
 JOB: [title]
 Client: [country] | $[spend] spent | [hire_rate]% hire rate | [avg_review] stars
 Budget: [range] | [type: hourly/fixed]
+OODA: Posted [X] ago — [MOVE NOW / 2HR WINDOW / LATE / EXPIRED]
 
 SCORES
   Job quality:    [0-100] — [1-line reason]
@@ -276,6 +467,7 @@ DECISION: [BID / SKIP / WATCHLIST]
 RATIONALE: [2 sentences. Honest. Challenge if needed.]
 
 [If BID] → POSITIONING ANGLE: [1 sentence on how to frame the proposal]
+[If BID + MOVE NOW] → FLAG: Submit within [X] minutes to hit the first-mover window.
 ```
 
 ---
@@ -355,6 +547,21 @@ This extracts budget, stack, red flags, green flags deterministically. Read the 
 python scripts/proposal_engine.py --check "draft text here"
 ```
 Fix all flagged issues. Revise until clean.
+
+**Pass 5.5 — Inversion + Red Team Gate (BLOCKS output — do not skip):**
+
+**Inversion:** What in this proposal could backfire?
+- Does it reveal our stack, pricing logic, or positioning in a way that weakens us?
+- Does it make a claim we cannot back up if the client pushes?
+- Does any line give the client a reason to pre-qualify us OUT?
+Fix every item before proceeding.
+
+**Red Team:** Switch sides. You are now the client — tired, reading proposal #47 today.
+- What makes you hesitate on this one?
+- What feels generic or like it was sent to 50 other jobs?
+- What question does this raise that it doesn't answer?
+- Would you click to see the profile, or move on?
+Return to your side. Fix every answer. Only proceed when the red team finds nothing worth exploiting.
 
 **Pass 6 — Loom Script:**
 
@@ -490,6 +697,7 @@ Full intel card before writing.
    - The specific kill shot observation (fill in the placeholder)
    - Any archetype match from `playbooks/client-types.md`
    - Flagged red flags from the job card that may surface on the call
+   - **3 Worlds Scenario Map** (see output format below) — pre-decide response for each world before the call starts. Do not walk into a discovery call with only a base-case plan.
 7. Save to `outputs/intel/YYYY-MM-DD-call-prep-SLUG.md`
 
 **Output format:**
@@ -506,6 +714,14 @@ THE KILL SHOT (open with this)
 
 RESEARCH GAPS (fill before the call)
   [checklist of what to verify in the 15 min before]
+
+3 WORLDS — PRE-DECIDED RESPONSES
+  BEST CASE:  [they're ready, full scope, want to move fast]
+              → Move: [exact approach — close to SOW on the call]
+  BASE CASE:  [interested but cautious, want to think about it]
+              → Move: [exact approach — next step with timeline]
+  WORST CASE: [lowball, not serious, or ghost after call]
+              → Move: [exact approach — how to qualify out gracefully]
 
 QUESTION STACK (8 questions, ordered by call phase)
   [Current State] ...
@@ -676,6 +892,62 @@ Surface the highest-ROI portfolio projects to build next, ranked by market deman
 - Upwork search terms the project attracts
 
 **When to run:** When deciding what to build next, when portfolio feels thin for a specific niche, before applying to a new category.
+
+---
+
+### `/war-room [situation or context]`
+**When to run:** Any situation requiring full strategic analysis before acting. Major decisions, complex client dynamics, information-sharing decisions with downside risk, negotiations, crisis moments, anything where the wrong move costs significantly.
+
+**What you do:**
+Run all 5 frameworks in sequence against the situation. Do not collapse any step. The output is one clear recommended move — not a list of options.
+
+**The 5-framework sweep:**
+
+1. **CHESS BOARD** — Map the full position: who knows what, what moves are available to each party, what does each action signal, what leverage exists, what moat does each move protect or expose.
+
+2. **INVERSION** — What guarantees failure here? What are the own goals? What should never be done regardless of short-term appeal? List every way the current plan could backfire.
+
+3. **OODA LOOP** — Is there a timing window? Where is speed a weapon? What is the optimal action cycle right now? Is there a moment where waiting loses the advantage?
+
+4. **RED TEAM** — Switch sides entirely. Attack the current plan as the adversary. Find the 3 most exploitable weaknesses. Return and fix each one before the recommended move is issued.
+
+5. **3 WORLDS** — Map best/base/worst case realistically. What is the single move that works across all three? If no such move exists — which world do we optimize for and why?
+
+**Output format:**
+```
+WAR ROOM — [Situation]
+Date: YYYY-MM-DD
+
+CHESS BOARD
+  We know / They know:
+  Our available moves:
+  Their likely moves:
+  What each move signals:
+  Leverage map (ours vs. theirs):
+
+INVERSION
+  What guarantees failure:
+  What to never do regardless of upside:
+
+OODA
+  Timing window: [exists / expired / none]
+  Speed advantage: [yes / no — reason]
+  Optimal action cycle:
+
+RED TEAM
+  Weakness 1: [how adversary exploits it → fix]
+  Weakness 2: [how adversary exploits it → fix]
+  Weakness 3: [how adversary exploits it → fix]
+
+3 WORLDS
+  Best case:  [scenario] → our move
+  Base case:  [scenario] → our move
+  Worst case: [scenario] → our move
+  Cross-world move: [the move that works in all three / the world we optimize for]
+
+RECOMMENDED MOVE
+  [One clear action. Not a menu. The move. Why this one.]
+```
 
 ---
 
