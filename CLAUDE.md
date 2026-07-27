@@ -1051,6 +1051,119 @@ Every proposal is a data point. The system gets smarter only if outcomes are log
 
 ---
 
+## OS Architecture — Three Tiers
+
+The OS operates in three tiers. Each tier is always active — they are not modes to switch between.
+
+```
+TIER 1 — REACTIVE (always active)
+  Commands fire when Emmanuel asks.
+  /job-qualify, /write-proposal, /prep-call, /strategy-review, etc.
+  Claude Code is the engine. Everything is on demand.
+
+TIER 2 — EVENT-DRIVEN (always active)
+  _QUEUE.md tracks priority items across all platforms.
+  heartbeat.py surfaces #1 action at session start.
+  Client state machine tracks 12 formal states with time limits.
+  Event catalog defines 18 events with automated detection.
+  pulse.py surfaces system vitals on demand.
+
+TIER 3 — AUTONOMOUS (always-on via Task Scheduler)
+  Daemons run in the background without Emmanuel initiating anything.
+  Emmanuel approves/rejects on Telegram. OS executes.
+
+  Daemon schedule:
+    Every 30 min  → email_watcher.py    (Gmail: job alerts + client replies)
+    Every 15 min  → job_watcher.py --process-approvals     (Telegram callbacks: job bids)
+    Every 15 min  → follow_up.py --process-approvals       (Telegram callbacks: follow-ups)
+    Every 6 hours → follow_up.py                           (scan 72h+ proposals, draft follow-ups)
+    On login + 8AM WAT → heartbeat.py                      (surface #1 action)
+```
+
+### Tier 3 — Setup (one-time, run as Administrator)
+
+**Step 1 — Telegram bot:**
+```
+1. Open Telegram → @BotFather → /newbot → follow prompts
+2. Copy the bot token
+3. Add TELEGRAM_BOT_TOKEN to config.py
+4. Send any message to your new bot
+5. python scripts/notify.py --get-chat-id
+6. Add TELEGRAM_CHAT_ID to config.py
+7. python scripts/notify.py --test   ← verify connection
+```
+
+**Step 2 — Gmail API:**
+```
+1. Go to console.cloud.google.com
+2. Create project → Enable Gmail API
+3. APIs & Services → Credentials → + CREATE CREDENTIALS → OAuth 2.0 Client ID → Desktop app
+4. Download JSON → save as credentials.json in the OS root
+5. python scripts/email_watcher.py --dry-run --since 24h   ← opens browser to authorize on first run
+6. Authorize with adekoyaemmanuel15@gmail.com (Upwork account Gmail)
+7. token.json is saved — subsequent runs are silent
+```
+
+**Step 3 — Register Task Scheduler tasks:**
+```powershell
+# Open PowerShell as Administrator:
+cd "c:\Users\HomePC\Documents\Upwork OS"
+.\scripts\setup_scheduler.ps1
+
+# Verify:
+Get-ScheduledTask -TaskPath "\UpworkOS\" | Select-Object TaskName, State
+
+# Remove all tasks (if needed):
+.\scripts\setup_scheduler.ps1 -Uninstall
+```
+
+**Step 4 — Verify full stack:**
+```
+python scripts/heartbeat.py              ← session start check
+python scripts/pulse.py                  ← vitals
+python scripts/follow_up.py --scan       ← proposal scan report
+python scripts/follow_up.py --dry-run    ← follow-up engine dry run
+python scripts/email_watcher.py --dry-run --since 24h  ← email scan dry run
+```
+
+### Tier 3 — Approval Flow
+
+When the OS detects a qualifying job or overdue follow-up:
+
+```
+OS detects event
+  ↓
+Telegram message arrives on Emmanuel's phone
+  (job score card / follow-up draft)
+  ↓
+Emmanuel taps [✅ Bid] or [❌ Skip] / [✅ Approve text] or [⏭️ Skip]
+  ↓
+Next 15-min tick processes the callback:
+  JOB BID approved    → added to _QUEUE.md, brain committed
+  JOB BID rejected    → logged, no action
+  FOLLOWUP approved   → proposal status updated to followup_sent
+                        follow-up text logged to proposal file
+                        Telegram confirms: "Send this on Upwork now"
+  FOLLOWUP rejected   → no change
+```
+
+Emmanuel never sends follow-ups — he taps approve and then sends manually on Upwork.
+The OS logs everything. The pattern detector flags when 3+ proposals ghost.
+
+### Tier 3 — Logs
+
+All daemon output logs to `logs/`:
+```
+logs/emailwatcher.log   ← email_watcher.py output
+logs/processapprovals.log
+logs/followup.log
+logs/heartbeat.log
+```
+
+Check logs when a task appears stuck: `Get-Content logs\emailwatcher.log -Tail 50`
+
+---
+
 ## Tools — When to Call What
 
 | Situation | Call |
@@ -1066,6 +1179,13 @@ Every proposal is a data point. The system gets smarter only if outcomes are log
 | Need to write a brain node | `python scripts/vault.py write [node-slug] [data]` |
 | Need to read a brain node | `python scripts/vault.py read [node-slug]` |
 | Need to commit new nodes | `cd hephzibah-brain-temp && git add . && git commit -m "upwork: [message]" && git push` |
+| Qualify a job from Gmail alert | `python scripts/job_watcher.py <url>` |
+| Check Telegram for job bid approvals | `python scripts/job_watcher.py --process-approvals` |
+| Scan proposals for follow-ups | `python scripts/follow_up.py --scan` |
+| Run follow-up engine | `python scripts/follow_up.py` |
+| Check Telegram for follow-up approvals | `python scripts/follow_up.py --process-approvals` |
+| Register all Tier 3 daemons | `.\scripts\setup_scheduler.ps1` (Admin PowerShell) |
+| Remove all Tier 3 daemons | `.\scripts\setup_scheduler.ps1 -Uninstall` (Admin PowerShell) |
 
 ---
 

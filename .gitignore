@@ -10,3 +10,8 @@ sources/
 node_modules/
 hephzibah-brain-temp/
 .mcp.json
+# Tier 3 — credentials (never commit)
+config.py
+credentials.json
+token.json
+data/pending_approvals.json
