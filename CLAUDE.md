@@ -889,39 +889,61 @@ Freelancer-initiated contract endings = JSS negative regardless of reason.
 
 ---
 
-### `/prospect [query]`
-**What it does:** Search Google Maps for businesses using Playwright (no API key needed — the OS controls the browser), extract emails from their websites, write personalized outreach, and fire the email engine automatically.
+### `/prospect [query or category]`
+**What it does:** Multi-source prospecting — Google Maps (local businesses), DesignRush (verified US agencies), or YC directory (disabled — Algolia restricted). Extracts emails, writes personalized outreach, sends automatically.
+
+**Sources:**
+```
+--source maps   Google Maps local businesses (quick wins, Shopify stores, boutiques)
+--source dr     DesignRush agency directory (verified US agencies with $5k+ projects)
+--source yc     Y Combinator (disabled — use dr instead)
+```
 
 **Usage:**
 ```
-python scripts/prospector.py --query "furniture stores Brooklyn NY" --limit 10
-python scripts/prospector.py --query "digital agencies Lagos Nigeria" --limit 20 --auto
-python scripts/prospector.py --query "shopify stores New York" --niche ecommerce --limit 15 --auto
-python scripts/prospector.py --query "law firms Chicago" --limit 5 --dry-run
+# Local businesses (quick wins)
+python scripts/prospector.py --source maps --query "clothing boutiques Brooklyn NY" --limit 15 --auto
+python scripts/prospector.py --source maps --query "video production agency Chicago" --limit 10 --dry-run
+
+# DesignRush agencies (high-budget prospects — SERAMAN-type)
+python scripts/prospector.py --source dr --category social-media --limit 15 --auto
+python scripts/prospector.py --source dr --category video --limit 10 --dry-run  # video-production agencies
+python scripts/prospector.py --source dr --category content --limit 20 --auto
+python scripts/prospector.py --source dr --category digital --limit 15 --auto
+
+# Categories for --source dr:
+# social-media | content | video | digital | email | ecommerce | seo | branding | automation | app-dev
 ```
 
-**What it does per business:**
-1. Google Places Text Search → get name, website, phone, address
-2. Visit their website → extract email from mailto: links + contact pages
-3. Analyze site → detect tech stack (Shopify, WordPress, etc.) + missing systems (no chat, no booking, no email marketing)
-4. Write personalized email — AI-written if `ANTHROPIC_API_KEY` is set, template otherwise
-5. Create prospect node in `outreach/prospects/`
-6. Auto-send immediately if `--auto` flag used
+**What it does per prospect:**
+1. Fetch business list from the source (Maps search / DesignRush listing page)
+2. Visit each website → extract email + analyze tech stack + detect missing systems
+3. Write personalized email naming the specific gap, specific tool (n8n, Klaviyo, Tidio), specific timeline
+4. Create prospect node in `outreach/prospects/`
+5. Auto-send immediately if `--auto` flag used
 
-**Telegram:** Sends a summary on Telegram when done — how many sent, how many had no email.
-
-**`--auto` flag:** Sends emails immediately as each prospect is found. Without it, nodes are created and the outreach daemon picks them up on the next 6h cycle.
-
-**Email quality:**
-- With `ANTHROPIC_API_KEY`: Claude Haiku writes each email from the site context — genuinely personalized
-- Without: template-based, personalized with the top site observation
-
-**Setup (one-time):**
+**Email output format (agency example):**
 ```
-pip install playwright
-playwright install chromium
+Hey,
+
+No automated reporting visible — monthly reports probably eat 1-2 days of someone's time.
+
+I build automated reporting systems for agencies — data from GA, Meta, and your ad platforms
+formatted per client and emailed out automatically, built in n8n. Agencies usually recover
+15-20 hours/week from manual reporting alone.
+
+Usually a 1-2 week build. Worth a quick call?
+
+Emmanuel
 ```
-No API key needed. Playwright opens a headless Chromium browser and interacts with Google Maps the same way a human would.
+
+**`--auto` flag:** Sends each email immediately when found. Without it, nodes are created and the outreach daemon picks them up on the next 6h cycle.
+
+**Telegram:** Sends summary when done — how many sent, how many had no email found.
+
+**No API key needed.** Playwright opens a headless Chromium browser. DesignRush website links are directly on listing pages — no profile page visits needed.
+
+**US-only rule:** Always use US city names or US-targeted DesignRush categories. Do not use African city queries.
 
 ---
 
@@ -1263,7 +1285,8 @@ Check logs when a task appears stuck: `Get-Content logs\emailwatcher.log -Tail 5
 | Check Telegram for follow-up approvals | `python scripts/follow_up.py --process-approvals` |
 | Register all Tier 3 daemons | `.\scripts\setup_scheduler.ps1` (Admin PowerShell) |
 | Remove all Tier 3 daemons | `.\scripts\setup_scheduler.ps1 -Uninstall` (Admin PowerShell) |
-| Prospect from Google Maps | `python scripts/prospector.py --query "..." --limit N --auto` |
+| Prospect from Google Maps | `python scripts/prospector.py --source maps --query "..." --limit N --auto` |
+| Prospect from DesignRush (agencies) | `python scripts/prospector.py --source dr --category social-media --limit N --auto` |
 | See outreach pipeline | `python scripts/outreach.py --scan` |
 | Queue outreach email | `python scripts/outreach.py --prospect [slug]` |
 | Queue all prospect emails | `python scripts/outreach.py --all` |
