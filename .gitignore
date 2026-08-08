@@ -15,3 +15,12 @@ config.py
 credentials.json
 token.json
 data/pending_approvals.json
+.gmail_token.json
+data/email_watcher_state.json
+logs/
+# Large video files
+videos/**/*.mp4
+videos/**/*.mov
+# Unrelated downloads
+*.mp4
+*.mov

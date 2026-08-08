@@ -1,0 +1,75 @@
+<div class="card" data-card-id="card-03">
+  <style>
+    .card[data-card-id="card-03"] .root {
+      width: 100%; height: 100%;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      padding: 44px 72px;
+      background: rgba(8,8,8,0.96);
+      border-top: 1px solid rgba(232,255,58,0.14);
+    }
+    .card[data-card-id="card-03"] .label {
+      font-family: 'Inter', monospace;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.26em;
+      text-transform: uppercase;
+      color: var(--accent-0);
+      margin-bottom: 24px;
+      opacity: 0;
+    }
+    .card[data-card-id="card-03"] .items {
+      display: flex;
+      gap: 0;
+    }
+    .card[data-card-id="card-03"] .item {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      flex: 1;
+      padding: 0 40px 0 0;
+      opacity: 0;
+    }
+    .card[data-card-id="card-03"] .item + .item {
+      padding-left: 40px;
+      border-left: 1px solid rgba(240,240,240,0.07);
+    }
+    .card[data-card-id="card-03"] .item-num {
+      font-family: 'Inter', sans-serif;
+      font-size: 52px;
+      font-weight: 700;
+      color: #F0F0F0;
+      line-height: 1;
+      letter-spacing: -0.02em;
+    }
+    .card[data-card-id="card-03"] .item-num .accent {
+      color: var(--accent-0);
+    }
+    .card[data-card-id="card-03"] .item-desc {
+      font-family: 'Inter', sans-serif;
+      font-size: 13px;
+      color: rgba(240,240,240,0.42);
+      font-weight: 400;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+  </style>
+  <div class="root">
+    <div class="label" id="c03-label">WHAT I BUILD</div>
+    <div class="items">
+      <div class="item" id="c03-item1">
+        <div class="item-num">n<span class="accent">8</span>n</div>
+        <div class="item-desc">Automation Pipelines</div>
+      </div>
+      <div class="item" id="c03-item2">
+        <div class="item-num">AI</div>
+        <div class="item-desc">Agent Systems</div>
+      </div>
+      <div class="item" id="c03-item3">
+        <div class="item-num">API</div>
+        <div class="item-desc">Integrations</div>
+      </div>
+    </div>
+  </div>
+</div>

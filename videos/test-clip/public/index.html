@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Hephzibah — Intro</title>
+  <style>
+    :root {
+      --accent-0: #E8FF3A;
+      --bg: #080808;
+      --fg: #F0F0F0;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html, body {
+      width: 1920px;
+      height: 1080px;
+      overflow: hidden;
+      background: var(--bg);
+      font-family: 'Inter', sans-serif;
+      color: var(--fg);
+    }
+
+    #stage {
+      position: relative;
+      width: 1920px;
+      height: 1080px;
+      overflow: hidden;
+      background: var(--bg);
+    }
+
+    /* ── Fonts ── */
+    @font-face {
+      font-family: 'Inter';
+      font-weight: 400;
+      src: url('fonts/Inter-400-latin.woff2') format('woff2');
+    }
+    @font-face {
+      font-family: 'Inter';
+      font-weight: 700;
+      src: url('fonts/Inter-700-latin.woff2') format('woff2');
+    }
+    @font-face {
+      font-family: 'Caveat';
+      font-weight: 400;
+      src: url('fonts/Caveat-400-latin.woff2') format('woff2');
+    }
+    @font-face {
+      font-family: 'Caveat';
+      font-weight: 700;
+      src: url('fonts/Caveat-700-latin.woff2') format('woff2');
+    }
+
+    /* ── Video layer ── */
+    #video-wrap {
+      position: absolute;
+      top: 0; left: 0;
+      width: 1920px;
+      height: 1080px;
+      z-index: 1;
+      overflow: hidden;
+      border-radius: 0;
+      will-change: transform, width, height, top, left, border-radius;
+    }
+
+    #main-video {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+
+    /* ── Card layer ── */
+    .card-slot {
+      position: absolute;
+      top: 0; left: 0;
+      width: 1920px;
+      height: 1080px;
+      z-index: 10;
+      overflow: hidden;
+      pointer-events: none;
+      opacity: 0;
+    }
+
+    /* card-03 lives in bottom zone (stack layout) */
+    #slot-03 {
+      top: 548px;
+      height: 532px;
+    }
+
+    /* card-04: full canvas dark */
+    #slot-04 {
+      z-index: 5;
+    }
+
+    /* card-06: full canvas outro */
+    #slot-06 {
+      z-index: 15;
+    }
+  </style>
+</head>
+<body>
+  <div id="stage"
+       data-composition-id="talking-head-recut"
+       data-width="1920"
+       data-height="1080"
+       data-duration="63">
+
+    <!-- Video — data-start tells HyperFrames to own playback sync -->
+    <div id="video-wrap">
+      <video id="main-video" src="input-video.mp4" preload="auto" playsinline muted
+             data-start="0" data-duration="63"></video>
+    </div>
+
+    <!-- Cards -->
+    <div class="card-slot" id="slot-01"></div>
+    <div class="card-slot" id="slot-02">
+      <style>
+        /* lower-third: pin to bottom of canvas */
+        #slot-02 {
+          top: auto;
+          bottom: 0;
+          height: 200px;
+        }
+      </style>
+    </div>
+    <div class="card-slot" id="slot-03"></div>
+    <div class="card-slot" id="slot-04" style="top:0;height:1080px;"></div>
+    <div class="card-slot" id="slot-05"></div>
+    <div class="card-slot" id="slot-06" style="top:0;height:1080px;"></div>
+
+  </div>
+
+  <script src="vendor/gsap.min.js"></script>
+
+  <script>
+  (async () => {
+    // Load card fragments into slots
+    await Promise.all([
+      ['slot-01', 'cards/card-01.html'],
+      ['slot-02', 'cards/card-02.html'],
+      ['slot-03', 'cards/card-03.html'],
+      ['slot-04', 'cards/card-04.html'],
+      ['slot-05', 'cards/card-05.html'],
+      ['slot-06', 'cards/card-06.html'],
+    ].map(async ([id, src]) => {
+      const html = await fetch(src).then(r => r.text());
+      document.getElementById(id).innerHTML = html;
+    }));
+
+    const wrap = document.getElementById('video-wrap');
+
+    // Master timeline — paused, HyperFrames seeks frame-by-frame
+    // Video sync is handled by HyperFrames via data-start on the <video> element
+    const tl = gsap.timeline({ paused: true });
+
+    // ── CARD 01: Fullscreen overlay [0.5 – 8.5s] ──
+    tl
+      .set(wrap, { x: 0, y: 0, width: 1920, height: 1080, borderRadius: 0 }, 0)
+      .set('#slot-01', { opacity: 0 }, 0)
+      .to('#slot-01', { opacity: 1, duration: 0.01 }, 0.5)
+      .fromTo('#c01-eyebrow',
+        { opacity: 0, y: 12 },
+        { opacity: 1, y: 0, duration: 0.55, ease: 'power3.out' }, 0.7)
+      .fromTo('#c01-title .char',
+        { opacity: 0, y: 20 },
+        { opacity: 1, y: 0, stagger: 0.05, duration: 0.45, ease: 'back.out(1.4)' }, 0.95)
+      .fromTo('#c01-subtitle',
+        { opacity: 0 },
+        { opacity: 1, duration: 0.5, ease: 'power2.out' }, 1.5)
+      .fromTo('#c01-bar',
+        { width: 0 },
+        { width: 120, duration: 0.6, ease: 'power2.out' }, 1.7)
+      .to('#slot-01', { opacity: 0, duration: 0.4 }, 8.1);
+
+    // ── CARD 02: Lower-third glass pill [8.5 – 19s] ──
+    tl
+      .set('#slot-02', { opacity: 0 }, 0)
+      .to('#slot-02', { opacity: 1, duration: 0.01 }, 8.5)
+      .fromTo('#c02-pill',
+        { opacity: 0, y: 30 },
+        { opacity: 1, y: 0, duration: 0.6, ease: 'power3.out' }, 8.6)
+      .to('#c02-pill', { opacity: 0, duration: 0.35 }, 18.5)
+      .to('#slot-02', { opacity: 0, duration: 0.01 }, 18.9);
+
+    // ── CARD 03: Stack layout [19 – 30s] — video shrinks to top 548px ──
+    tl
+      .set('#slot-03', { opacity: 0 }, 0)
+      .to(wrap, { height: 548, duration: 0.55, ease: 'power3.inOut' }, 18.9)
+      .to('#slot-03', { opacity: 1, duration: 0.01 }, 19.0)
+      .fromTo('#c03-label',
+        { opacity: 0, y: 8 },
+        { opacity: 1, y: 0, duration: 0.4, ease: 'power2.out' }, 19.2)
+      .fromTo('#c03-item1, #c03-item2, #c03-item3',
+        { opacity: 0, x: -18 },
+        { opacity: 1, x: 0, stagger: 0.12, duration: 0.45, ease: 'power3.out' }, 19.5)
+      .to('#slot-03', { opacity: 0, duration: 0.35 }, 29.5)
+      .to(wrap, { height: 1080, duration: 0.4, ease: 'power2.inOut' }, 29.5);
+
+    // ── CARD 04: PiP + dark card [30 – 43s] ──
+    tl
+      .set('#slot-04', { opacity: 0 }, 0)
+      .to('#slot-04', { opacity: 1, duration: 0.4 }, 30.0)
+      .to(wrap, {
+        x: 1460, y: 720, width: 420, height: 316, borderRadius: 16,
+        duration: 0.6, ease: 'power3.inOut'
+      }, 30.0)
+      .fromTo('#c04-headline',
+        { opacity: 0, y: 22 },
+        { opacity: 1, y: 0, duration: 0.55, ease: 'back.out(1.2)' }, 30.6)
+      .fromTo('#c04-f1',
+        { opacity: 0, x: -16 },
+        { opacity: 1, x: 0, duration: 0.42, ease: 'power2.out' }, 31.1)
+      .fromTo('#c04-f2',
+        { opacity: 0, x: -16 },
+        { opacity: 1, x: 0, duration: 0.42, ease: 'power2.out' }, 31.35)
+      .fromTo('#c04-f3',
+        { opacity: 0, x: -16 },
+        { opacity: 1, x: 0, duration: 0.42, ease: 'power2.out' }, 31.6)
+      .to('#slot-04', { opacity: 0, duration: 0.4 }, 42.5)
+      .to(wrap, {
+        x: 0, y: 0, width: 1920, height: 1080, borderRadius: 0,
+        duration: 0.55, ease: 'power2.inOut'
+      }, 42.5);
+
+    // ── CARD 05: Stat overlay [43 – 53s] ──
+    tl
+      .set('#slot-05', { opacity: 0 }, 0)
+      .to('#slot-05', { opacity: 1, duration: 0.01 }, 43.1)
+      .fromTo('#c05-label',
+        { opacity: 0, y: 10 },
+        { opacity: 1, y: 0, duration: 0.45, ease: 'power2.out' }, 43.3)
+      .to({ val: 0 }, {
+        val: 5, duration: 1.4, ease: 'power2.out',
+        onUpdate: function() {
+          const el = document.getElementById('c05-num');
+          if (el) el.textContent = Math.round(this.targets()[0].val);
+        }
+      }, 43.5)
+      .fromTo('#c05-desc',
+        { opacity: 0 },
+        { opacity: 1, duration: 0.5, ease: 'power2.out' }, 44.8)
+      .to('#slot-05', { opacity: 0, duration: 0.45 }, 52.5);
+
+    // ── CARD 06: Outro [53 – 63s] ──
+    tl
+      .set('#slot-06', { opacity: 0 }, 0)
+      .to('#main-video', { opacity: 0, duration: 0.8 }, 52.8)
+      .to('#slot-06', { opacity: 1, duration: 0.5 }, 53.2)
+      .fromTo('#c06-eyebrow',
+        { opacity: 0, y: 10 },
+        { opacity: 1, y: 0, duration: 0.5, ease: 'power2.out' }, 53.5)
+      .fromTo('#c06-name',
+        { opacity: 0, scale: 0.94 },
+        { opacity: 1, scale: 1, duration: 0.65, ease: 'back.out(1.3)' }, 53.8)
+      .fromTo('#c06-line',
+        { width: 0 },
+        { width: 200, duration: 0.5, ease: 'power2.out' }, 54.5)
+      .fromTo('#c06-sub',
+        { opacity: 0 },
+        { opacity: 1, duration: 0.45, ease: 'power2.out' }, 54.9);
+
+    // Expose for HyperFrames — must match data-composition-id on #stage
+    if (!window.__timelines) window.__timelines = {};
+    window.__timelines['talking-head-recut'] = tl;
+  })();
+  </script>
+</body>
+</html>
