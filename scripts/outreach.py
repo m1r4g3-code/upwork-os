@@ -199,7 +199,8 @@ def generate_body(prospect: dict) -> str:
     Otherwise, build from context + notes angle.
     """
     meta    = prospect["meta"]
-    name    = meta.get("name", "").split()[0].title()
+    name    = (meta.get("name", "") or "").split()
+    name    = name[0].title() if name else ""
     company = meta.get("company", "")
     context = prospect["context"]
     notes   = prospect["notes"]
