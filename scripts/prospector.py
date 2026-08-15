@@ -5,13 +5,20 @@ Upwork OS — Multi-Source Prospector (Playwright)
 Sources:
   --source maps   Google Maps local businesses (quick wins, email extraction)
   --source dr     DesignRush agency directory (verified US agencies, high-budget)
-  --source yc     Y Combinator company directory (funded US startups)
+  --source yc     Y Combinator company directory (funded US startups) [disabled]
+  --source ph     ProductHunt recent launches (signal: just launched, no ops systems yet)
+  --source tc     TechCrunch funding news (signal: just raised, scaling pain coming)
 
-No API keys needed. Playwright controls the browser autonomously.
+Signal-based outreach: each source carries a trigger event that drives the email angle.
+Hunter.io integration (set HUNTER_API_KEY in config) upgrades email finding to
+decision-maker level (CEO/founder/COO) instead of generic contact page scraping.
+
+No API keys needed for scraping. Hunter.io key is optional but improves email quality.
 
 Usage:
     python scripts/prospector.py --source dr --category social-media --limit 15 --auto
-    python scripts/prospector.py --source dr --category video --limit 10 --dry-run
+    python scripts/prospector.py --source ph --limit 10 --dry-run
+    python scripts/prospector.py --source tc --limit 10 --auto
     python scripts/prospector.py --source maps --query "video production agency Chicago" --limit 10 --auto
 """
 
@@ -32,6 +39,7 @@ ROOT          = config.ROOT
 BRAIN         = config.BRAIN
 PROSPECTS_DIR = BRAIN / "outreach" / "prospects"
 AI_KEY        = getattr(config, "ANTHROPIC_API_KEY", "")
+HUNTER_KEY    = getattr(config, "HUNTER_API_KEY", "")
 
 
 # ─── Shared Playwright helpers ────────────────────────────────────────────────
@@ -304,6 +312,11 @@ def scrape_designrush(category: str, limit: int = 10) -> list:
 
         browser.close()
 
+    # Remove sponsored-slot leaks: a URL shared by 2+ different agencies = injected ad link
+    from collections import Counter
+    _url_counts = Counter(ag["website"] for ag in agencies if ag.get("website"))
+    agencies = [ag for ag in agencies if _url_counts.get(ag.get("website", ""), 0) < 2]
+
     # Build result list — strip UTM params from website URLs
     for ag in agencies[:limit]:
         slug    = ag["slug"]
@@ -349,6 +362,262 @@ def scrape_yc(industry: str = "", limit: int = 10) -> list:
     print("[yc] YC directory is unavailable — their Algolia API is IP-restricted to browser sessions.")
     print("[yc] Use --source dr for US agency prospects instead.")
     return []
+
+
+# ─── Source 4: ProductHunt recent launches ────────────────────────────────────
+# Signal: company just launched a product = no ops systems built yet, founder overwhelmed.
+# Best targets: SaaS, AI tools, productivity apps. Skip: games, hardware, consumer.
+
+PH_SKIP_TAGS = {"game", "gaming", "hardware", "crypto", "blockchain", "nft", "podcast",
+                "book", "newsletter", "browser extension", "chrome extension", "font"}
+
+PH_TARGET_TAGS = {"saas", "ai", "productivity", "developer tools", "no-code", "automation",
+                  "marketing", "analytics", "crm", "b2b", "api", "workflow"}
+
+
+def scrape_producthunt(limit: int = 10) -> list:
+    """
+    Uses ProductHunt RSS feed to get recent launches, then visits each product's
+    website directly. No PH session needed, no bot detection.
+    """
+    import xml.etree.ElementTree as ET
+
+    feed_url = "https://www.producthunt.com/feed"
+    print(f"[ph] RSS: {feed_url}")
+
+    NS_ATOM = "http://www.w3.org/2005/Atom"
+
+    articles = []
+    try:
+        req = urllib.request.Request(feed_url, headers={
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+            "Accept":     "application/atom+xml, application/xml, */*",
+        })
+        with urllib.request.urlopen(req, timeout=15) as r:
+            xml_bytes = r.read()
+        root = ET.fromstring(xml_bytes)
+
+        for entry in root.findall(f"{{{NS_ATOM}}}entry"):
+            title_el = entry.find(f"{{{NS_ATOM}}}title")
+            title    = (title_el.text or "").strip() if title_el is not None else ""
+
+            # Atom link is an element with href attribute
+            link_el  = entry.find(f"{{{NS_ATOM}}}link[@rel='alternate']")
+            if link_el is None:
+                link_el = entry.find(f"{{{NS_ATOM}}}link")
+            link = (link_el.get("href") or "").strip() if link_el is not None else ""
+
+            summary_el = entry.find(f"{{{NS_ATOM}}}summary")
+            desc       = (summary_el.text or "").strip() if summary_el is not None else ""
+
+            published_el = entry.find(f"{{{NS_ATOM}}}published")
+            date         = (published_el.text or "")[:10] if published_el is not None else ""
+
+            # PH Atom feed doesn't expose the product's external website directly.
+            # We resolve it using DuckDuckGo instant answers on the product name.
+            website = ""
+
+            if title and link:
+                articles.append({"name": title, "link": link, "website": website,
+                                  "desc": re.sub(r'<[^>]+>', '', desc)[:200], "date": date})
+    except Exception as e:
+        print(f"[ph] Feed error: {e}", file=sys.stderr)
+        return []
+
+    if not articles:
+        print("[ph] No articles from RSS feed.")
+        return []
+
+    print(f"[ph] {len(articles)} launches from RSS. Building prospect list...")
+
+    today   = datetime.now().strftime("%Y-%m-%d")
+    results = []
+    count   = 0
+
+    for p in articles:
+        if count >= limit:
+            break
+        name    = p["name"].strip()
+        website = p["website"].strip()
+        tagline = p["desc"][:80]
+        date    = p["date"][:10] or today
+
+        if not name or len(name) < 3:
+            continue
+
+        # Skip bot/extension/crypto noise via name heuristics
+        name_lower = name.lower()
+        if any(skip in name_lower for skip in ("chrome extension", "browser extension",
+               "nft", "token", "blockchain", "podcast", "newsletter issue")):
+            continue
+
+        # Website: use DuckDuckGo instant-answer to find the product's real website
+        if not website:
+            website = find_website_by_name(name, tagline)
+
+        results.append({
+            "name":    name,
+            "website": website,
+            "tagline": tagline,
+            "votes":   0,
+            "source":  "ph",
+            "signal":  "product_launch",
+            "signal_detail": f"Launched on ProductHunt, {date}",
+            "formatted_phone_number": "",
+            "formatted_address":      "United States",
+            "category": "saas",
+        })
+        count += 1
+        print(f"  {name} | {website or 'no website'}")
+
+    print(f"[ph] {len(results)} qualifying launches")
+    return results
+
+
+# ─── Source 5: TechCrunch funding news ───────────────────────────────────────
+# Signal: company just raised Series A/B = has money, operational scaling pain imminent.
+# Best targets: SaaS, AI, media/content companies that raised $2M-$50M.
+
+def scrape_techcrunch_funding(limit: int = 10) -> list:
+    """
+    Uses TechCrunch RSS feed + DuckDuckGo instant-answer to find company websites.
+    No Playwright needed, no paywall issues.
+    """
+    import xml.etree.ElementTree as ET
+
+    results      = []
+    feed_urls    = [
+        "https://techcrunch.com/tag/funding/feed/",
+        "https://techcrunch.com/category/venture/feed/",
+    ]
+
+    articles = []
+    for feed_url in feed_urls:
+        print(f"[tc] RSS: {feed_url}")
+        try:
+            req = urllib.request.Request(feed_url, headers={"User-Agent": "Mozilla/5.0"})
+            with urllib.request.urlopen(req, timeout=15) as r:
+                xml_bytes = r.read()
+            root = ET.fromstring(xml_bytes)
+            for item in root.findall(".//item"):
+                title = (item.findtext("title") or "").strip()
+                link  = (item.findtext("link") or "").strip()
+                date  = (item.findtext("pubDate") or "")[:16]
+                desc  = (item.findtext("description") or "").strip()
+                if title and link:
+                    articles.append({"title": title, "link": link, "date": date, "desc": desc})
+        except Exception as e:
+            print(f"[tc] RSS error: {e}", file=sys.stderr)
+
+    if not articles:
+        print("[tc] No articles from RSS. TechCrunch may have changed their feed URL.")
+        return []
+
+    print(f"[tc] {len(articles)} articles from RSS. Filtering for funding rounds...")
+
+    # Filter and parse funding articles
+    funding_articles = []
+    seen_companies   = set()
+
+    for art in articles:
+        title       = art["title"]
+        title_lower = title.lower()
+
+        funding_keywords = ("raises", "raised", "funding", "series a", "series b",
+                            "seed round", "million", "investment", "secures", "closes")
+        if not any(k in title_lower for k in funding_keywords):
+            continue
+
+        # Amount extraction
+        amount_m = 0
+        amount_match = re.search(r'\$(\d+(?:\.\d+)?)\s*(m|million|b|billion)', title_lower)
+        if amount_match:
+            amount_m = float(amount_match.group(1))
+            if amount_match.group(2) in ("b", "billion"):
+                amount_m *= 1000
+        if amount_m > 80:  # Skip mega-rounds
+            continue
+
+        # Company name extraction — strip "X-backed", "Former [X]", "How [N]" prefixes
+        company = ""
+        clean_title = re.sub(
+            r'^(?:[A-Za-z\s]+-backed\s+|Former\s+[A-Za-z]+\s+|How\s+\d+\s+)',
+            '', title
+        ).strip()
+
+        for pattern in [
+            r'^([A-Z][A-Za-z0-9\s\.\-]{2,30}?)\s+(?:raises|raised|secures|closes|lands|gets)\b',
+            r'^([A-Z][A-Za-z0-9\s\.\-]{2,30}?),\s+(?:a|an|the|which|that)\s+',
+        ]:
+            m = re.match(pattern, clean_title)
+            if m:
+                company = m.group(1).strip().rstrip(",")
+                # Remove trailing corporate suffixes
+                company = re.sub(r'\s+(?:Inc\.?|LLC|Ltd\.?|Corp\.?|Co\.?)$', '', company).strip()
+                break
+
+        if not company or len(company) < 3:
+            continue
+        # Skip titles that read as a sentence rather than a company name
+        if any(w in company.lower() for w in (" the ", " a ", " an ", " to ", " and ")):
+            continue
+        if company in seen_companies:
+            continue
+
+        # Stage
+        stage = "Venture"
+        for s in ("Series B", "Series A", "Pre-Seed", "Seed", "Series C"):
+            if s.lower() in title_lower:
+                stage = s
+                break
+        if stage == "Series C":
+            continue
+
+        seen_companies.add(company)
+        amount_str = f"${int(amount_m)}M" if amount_m else "undisclosed"
+        funding_articles.append({**art, "company": company, "stage": stage,
+                                  "amount_m": amount_m, "amount_str": amount_str})
+
+    print(f"[tc] {len(funding_articles)} qualifying rounds. Opening articles for website links...")
+
+    if not funding_articles:
+        return []
+
+    try:
+        from playwright.sync_api import sync_playwright
+    except ImportError:
+        print("[prospector] Playwright not installed.")
+        sys.exit(1)
+
+    # TechCrunch articles are behind a paywall — use DuckDuckGo to find each company's website
+    for art in funding_articles[:limit]:
+        company    = art["company"]
+        stage      = art["stage"]
+        amount_str = art["amount_str"]
+        date       = art["date"][:10]
+        tagline    = art["title"][:100]
+
+        # DDG lookup for the company's website
+        website = find_website_by_name(company, f"startup {stage}")
+        print(f"  {company} | {stage} {amount_str} | {website or 'no website'}")
+
+        results.append({
+            "name":    company,
+            "website": website,
+            "tagline": tagline,
+            "source":  "tc",
+            "signal":  "funding_raised",
+            "signal_detail": f"Raised {amount_str} ({stage}), {date}",
+            "stage":   stage,
+            "amount":  amount_str,
+            "formatted_phone_number": "",
+            "formatted_address":      "United States",
+            "category": "startup",
+        })
+        time.sleep(0.3)
+
+    print(f"[tc] {len(results)} funded companies")
+    return results
 
 
 # ─── Website analysis ─────────────────────────────────────────────────────────
@@ -436,7 +705,8 @@ def _local_observations(html_lower: str) -> list:
 def analyze_website_playwright(page, website: str, business_name: str,
                                 source: str = "maps") -> dict:
     if not website:
-        return {"tech_stack": [], "observations": [], "angle": "", "email": "", "biz_type": "local"}
+        return {"tech_stack": [], "observations": [], "angle": "", "email": "",
+                "biz_type": "local", "page_text": "", "founder_name": ""}
 
     if not website.startswith("http"):
         website = "https://" + website
@@ -445,10 +715,15 @@ def analyze_website_playwright(page, website: str, business_name: str,
         page.goto(website, wait_until="domcontentloaded", timeout=15000)
         page.wait_for_timeout(1500)
     except Exception:
-        return {"tech_stack": [], "observations": [], "angle": "", "email": "", "biz_type": "local"}
+        return {"tech_stack": [], "observations": [], "angle": "", "email": "",
+                "biz_type": "local", "page_text": "", "founder_name": ""}
 
     html_text  = page.content()
     html_lower = html_text.lower()
+
+    # Extract visible text for Claude analysis (strips HTML tags)
+    visible_text = re.sub(r'<[^>]+>', ' ', html_text)
+    visible_text = re.sub(r'\s+', ' ', visible_text).strip()[:4000]
 
     tech_stack = []
     if "shopify" in html_lower or "cdn.shopify" in html_lower:
@@ -476,26 +751,43 @@ def analyze_website_playwright(page, website: str, business_name: str,
 
     emails = _extract_emails_from_content(html_text)
 
-    if not emails:
-        base = website.rstrip("/")
-        for path in ["/contact", "/contact-us", "/about", "/team", "/contact.html"]:
-            try:
-                page.goto(base + path, wait_until="domcontentloaded", timeout=10000)
-                page.wait_for_timeout(800)
-                emails = _extract_emails_from_content(page.content())
-                if emails:
-                    break
-            except Exception:
-                pass
+    # Also try contact/about/team pages for email AND founder name
+    founder_name = ""
+    extra_pages  = ["/contact", "/contact-us", "/about", "/team", "/about-us"]
+    base         = website.rstrip("/")
+    for path in extra_pages:
+        if emails and founder_name:
+            break
+        try:
+            page.goto(base + path, wait_until="domcontentloaded", timeout=10000)
+            page.wait_for_timeout(800)
+            page_content = page.content()
+            if not emails:
+                emails = _extract_emails_from_content(page_content)
+            # Try to extract founder/CEO name from team/about pages
+            if not founder_name and path in ("/about", "/team", "/about-us"):
+                text = re.sub(r'<[^>]+>', ' ', page_content)
+                visible_text += " " + text[:1500]  # append to context for Claude
+                # Heuristic: look for "CEO", "Founder", "Co-Founder" near a name
+                founder_m = re.search(
+                    r'([A-Z][a-z]+(?:\s+[A-Z][a-z]+)+)\s*[,\n|]?\s*(?:CEO|Founder|Co-Founder|Managing Director|President)',
+                    page_content
+                )
+                if founder_m:
+                    founder_name = founder_m.group(1).strip()
+        except Exception:
+            pass
 
     angle = observations[0] if observations else f"noticed something on {business_name}"
 
     return {
-        "tech_stack":   tech_stack,
-        "observations": observations,
-        "angle":        angle,
-        "email":        emails[0] if emails else "",
-        "biz_type":     biz_type,
+        "tech_stack":    tech_stack,
+        "observations":  observations,
+        "angle":         angle,
+        "email":         emails[0] if emails else "",
+        "biz_type":      biz_type,
+        "page_text":     visible_text,
+        "founder_name":  founder_name,
     }
 
 
@@ -550,54 +842,212 @@ def _extract_emails_from_content(html_text: str) -> list:
     return clean[:3]
 
 
-# ─── Email personalization ────────────────────────────────────────────────────
+# ─── Decision-maker email finder (Hunter.io) ─────────────────────────────────
 
-def _ai_write_email(business_name: str, website: str, biz_type: str,
-                    tech_stack: list, observations: list) -> str:
-    if not AI_KEY:
+_DECISION_ROLES = {"ceo", "founder", "co-founder", "owner", "president",
+                   "coo", "cto", "head", "director", "vp", "managing"}
+
+def find_website_by_name(name: str, tagline: str = "") -> str:
+    """
+    Try DuckDuckGo instant-answer first, then domain guessing with HTTP probing.
+    Works for well-known entities (DDG) and startups with predictable domains (guessing).
+    """
+    # 1. DuckDuckGo instant-answer (good for established companies)
+    query = f"{name} company startup"
+    url   = (f"https://api.duckduckgo.com/?q={urllib.parse.quote(query)}"
+             f"&format=json&no_redirect=1&no_html=1&skip_disambig=1")
+    try:
+        req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
+        with urllib.request.urlopen(req, timeout=8) as r:
+            data = json.loads(r.read())
+
+        abstract_url = data.get("AbstractURL", "")
+        if abstract_url and not any(s in abstract_url for s in
+                                    ("producthunt.com", "twitter.com", "wikipedia",
+                                     "facebook.com", "linkedin.com")):
+            return abstract_url.split("?")[0].rstrip("/")
+
+        official = data.get("OfficialWebsite", "")
+        if official:
+            return official.rstrip("/")
+    except Exception:
+        pass
+
+    # 2. Domain guessing: common startup TLD patterns
+    name_slug = re.sub(r'[^a-zA-Z0-9]', '', name).lower()
+    if len(name_slug) < 3:
         return ""
 
-    type_context = {
-        "agency":    "a content/social media/digital marketing agency in the US",
-        "startup":   "a funded US startup",
-        "ecommerce": "an e-commerce brand (Shopify or similar)",
-        "local":     "a local business",
-    }.get(biz_type, "a business")
+    candidates = [
+        f"https://{name_slug}.com",
+        f"https://{name_slug}.ai",
+        f"https://{name_slug}.io",
+        f"https://get{name_slug}.com",
+        f"https://try{name_slug}.com",
+        f"https://{name_slug}.co",
+        f"https://{name_slug}.app",
+    ]
+    for candidate in candidates:
+        try:
+            req = urllib.request.Request(
+                candidate, method="HEAD",
+                headers={"User-Agent": "Mozilla/5.0"},
+            )
+            resp = urllib.request.urlopen(req, timeout=3)
+            if resp.status < 400:
+                return candidate.rstrip("/")
+        except Exception:
+            pass
 
-    obs_text  = "\n".join(f"- {o}" for o in observations[:3]) or "- No specific issues identified"
-    tech_text = ", ".join(tech_stack) or "unclear"
+    return ""
 
-    deliverable_hint = {
-        "agency":    "automated client reporting (Google Analytics, Meta Ads, etc. formatted and emailed per client), content scheduling pipelines, or approval workflow automation built in n8n or Zapier",
-        "startup":   "internal automation (user onboarding sequences, Slack alerts, data syncs between tools) built in n8n — typically a 2-3 week build",
-        "ecommerce": "Shopify conversion stack: live chat (Tidio or Gorgias), Klaviyo abandoned cart sequences, automated review requests — usually 1-week setup",
-        "local":     "website upgrades or automation: live chat, online booking, email follow-up sequences — specific tools, not vague 'fixes'",
-    }.get(biz_type, "automation workflows or web development using specific tools (n8n, Zapier, Klaviyo, Shopify)")
 
-    prompt = (
-        f"Write a cold outreach email from Emmanuel (automation & web specialist) "
-        f"to the owner/founder of {business_name} — {type_context}.\n\n"
-        f"Website: {website}\nTech: {tech_text}\nObservations:\n{obs_text}\n\n"
-        f"What Emmanuel actually builds (use this to describe the solution specifically):\n{deliverable_hint}\n\n"
-        f"Rules:\n"
-        f"- 80-110 words max\n"
-        f"- Open with THEIR specific situation (use the observation above), not 'I'\n"
-        f"- Name a SPECIFIC tool or deliverable in the solution line (n8n, Klaviyo, Zapier, live chat, etc.)\n"
-        f"- Include a rough timeline (1 week, 2 weeks, 1-2 week build)\n"
-        f"- One clear, low-friction ask (quick call or just reply)\n"
-        f"- Direct, slightly senior — sounds like a peer, not a vendor\n"
-        f"- No 'passionate about', 'leverage', 'synergy', 'delighted', 'streamlined', 'fix the gaps'\n"
-        f"- No em dashes. Short sentences.\n"
-        f"- Sign off: Emmanuel\n"
-        f"- Body only, no subject line\n"
-        f"- The prospect must understand exactly what they're buying after reading this"
-    )
+def find_decision_maker_email(domain: str) -> dict:
+    """
+    Try Hunter.io domain search first (if HUNTER_API_KEY set).
+    Returns: {"email": str, "name": str, "role": str, "confidence": int}
+    Falls back to empty dict (caller falls back to website scraping).
+    """
+    if not HUNTER_KEY or not domain:
+        return {}
+
+    domain = re.sub(r'^https?://', '', domain).split('/')[0].strip()
+    if not domain:
+        return {}
+
+    url = (f"https://api.hunter.io/v2/domain-search"
+           f"?domain={urllib.parse.quote(domain)}"
+           f"&limit=10&api_key={HUNTER_KEY}")
+    try:
+        with urllib.request.urlopen(url, timeout=10) as r:
+            data = json.loads(r.read())
+    except Exception as e:
+        print(f"  [hunter] Error: {e}", file=sys.stderr)
+        return {}
+
+    emails = data.get("data", {}).get("emails", [])
+    if not emails:
+        return {}
+
+    # Prefer decision-maker roles with high confidence
+    best = None
+    for e in emails:
+        role        = (e.get("position") or "").lower()
+        confidence  = e.get("confidence") or 0
+        is_decision = any(r in role for r in _DECISION_ROLES)
+        if is_decision and confidence >= 50:
+            if best is None or confidence > best.get("confidence", 0):
+                best = {
+                    "email":      e.get("value", ""),
+                    "name":       f"{e.get('first_name','')} {e.get('last_name','')}".strip(),
+                    "role":       e.get("position", ""),
+                    "confidence": confidence,
+                }
+
+    # If no decision-maker found, take highest-confidence email
+    if not best and emails:
+        e    = max(emails, key=lambda x: x.get("confidence", 0))
+        best = {
+            "email":      e.get("value", ""),
+            "name":       f"{e.get('first_name','')} {e.get('last_name','')}".strip(),
+            "role":       e.get("position", ""),
+            "confidence": e.get("confidence", 0),
+        }
+
+    return best or {}
+
+
+# ─── Email personalization ────────────────────────────────────────────────────
+
+def _claude_analyze_and_write(
+    business_name: str,
+    website: str,
+    page_text: str,
+    signal: str,
+    signal_detail: str,
+    biz_type: str,
+    tech_stack: list,
+    founder_name: str = "",
+) -> dict:
+    """
+    Claude reads the actual website content + the trigger signal and produces:
+      - founder_name (if found on site)
+      - specific_pain (one concrete observation from the site)
+      - email_body (under 90 words, signed Emmanuel)
+      - subject_line (3-5 words, signal-specific)
+    Returns a dict with those keys. Falls back to empty if no AI key.
+    """
+    if not AI_KEY:
+        return {}
+
+    signal_context = {
+        "product_launch": (
+            f"TRIGGER: {business_name} just launched on ProductHunt ({signal_detail}). "
+            f"They probably have no ops automation yet. The earlier you build it the cheaper."
+        ),
+        "funding_raised": (
+            f"TRIGGER: {business_name} just raised money ({signal_detail}). "
+            f"They have capital and are now under pressure to scale. "
+            f"Manual ops become the first bottleneck at this stage."
+        ),
+        "website_gap": (
+            f"TRIGGER: Website analysis revealed operational gaps. "
+            f"Use the most specific one from the website content below."
+        ),
+    }.get(signal, "Use the most specific operational gap visible from the website.")
+
+    tech_text    = ", ".join(tech_stack) if tech_stack else "unclear"
+    founder_hint = f"Known founder/CEO name: {founder_name}." if founder_name else ""
+
+    prompt = f"""You are reading the website of a company called {business_name}.
+Website: {website}
+Tech stack detected: {tech_text}
+{founder_hint}
+
+WEBSITE CONTENT (first 4000 chars of visible text):
+---
+{page_text[:4000]}
+---
+
+{signal_context}
+
+Emmanuel builds AI automation systems using n8n, Make, Claude API, and similar tools.
+He builds things like: automated reporting pipelines, user onboarding flows, CRM automation,
+content publishing systems, Slack/email alert systems, data sync between tools.
+His case study: built a content automation pipeline that reached 1.3M views.
+
+Your job: produce three things.
+
+1. FOUNDER_NAME: The founder or CEO's first name if you can see it in the website content. If not visible, output blank.
+
+2. SPECIFIC_PAIN: The single most concrete operational problem visible from this company's website or the trigger event. Not generic ("they need automation") — specific ("they're manually posting to 3 platforms daily with no scheduling tool" or "raised $17M but their onboarding page is a static FAQ with no automation"). One sentence, under 20 words.
+
+3. EMAIL: A cold outreach email from Emmanuel. Rules:
+- Under 90 words total (including sign-off)
+- Open with the SPECIFIC_PAIN or the trigger event — not "I" not "Hi I saw your website"
+- First line should make them go "how does he know that?"
+- Name exactly one tool Emmanuel would use (n8n, Klaviyo, Make, Claude API)
+- Give a rough timeline (1-2 weeks, 2-3 weeks)
+- End with a binary yes/no question
+- No em dashes. No "passionate about". No "leverage". No "streamline". No "seamless".
+- Sign off: Emmanuel
+
+4. SUBJECT: A 3-5 word email subject line. Signal-specific. Not generic.
+   Good: "Post-$17M ops automation" / "Onboarding gap at Meridian" / "Content pipeline post-launch"
+   Bad: "Partnership opportunity" / "Quick question" / "Automation for your business"
+
+Output format (use these exact labels, nothing else):
+FOUNDER_NAME: [name or blank]
+SPECIFIC_PAIN: [one sentence]
+SUBJECT: [3-5 words]
+EMAIL:
+[the full email body]"""
 
     try:
         payload = json.dumps({
-            "model":    "claude-haiku-4-5-20251001",
-            "max_tokens": 350,
-            "messages": [{"role": "user", "content": prompt}],
+            "model":      "claude-haiku-4-5-20251001",
+            "max_tokens": 500,
+            "messages":   [{"role": "user", "content": prompt}],
         }).encode("utf-8")
         req = urllib.request.Request(
             "https://api.anthropic.com/v1/messages",
@@ -608,87 +1058,146 @@ def _ai_write_email(business_name: str, website: str, biz_type: str,
                 "content-type":      "application/json",
             }
         )
-        with urllib.request.urlopen(req, timeout=20) as r:
-            return json.loads(r.read())["content"][0]["text"].strip()
+        with urllib.request.urlopen(req, timeout=25) as r:
+            text = json.loads(r.read())["content"][0]["text"].strip()
+
+        # Parse structured output
+        result         = {}
+        fn_m           = re.search(r'FOUNDER_NAME:\s*(.+)', text)
+        pain_m         = re.search(r'SPECIFIC_PAIN:\s*(.+)', text)
+        subject_m      = re.search(r'SUBJECT:\s*(.+)', text)
+        email_m        = re.search(r'EMAIL:\s*\n([\s\S]+)', text)
+
+        result["founder_name"]  = fn_m.group(1).strip() if fn_m else ""
+        result["specific_pain"] = pain_m.group(1).strip() if pain_m else ""
+        result["subject"]       = subject_m.group(1).strip() if subject_m else ""
+        result["email_body"]    = email_m.group(1).strip() if email_m else ""
+
+        # Clean blank founder name
+        if result["founder_name"].lower() in ("blank", "none", "unknown", "n/a", ""):
+            result["founder_name"] = ""
+
+        return result
+
     except Exception as e:
-        print(f"[prospector] AI email error: {e}", file=sys.stderr)
-        return ""
+        print(f"[prospector] Claude analysis error: {e}", file=sys.stderr)
+        return {}
+
+
+_claude_cache: dict = {}  # cache per website to avoid double calls in same run
+
+
+def _get_claude_analysis(business_name: str, website: str, page_text: str,
+                         signal: str, signal_detail: str, biz_type: str,
+                         tech_stack: list, founder_name: str) -> dict:
+    """Run Claude analysis once per prospect, cache the result."""
+    key = website or business_name
+    if key not in _claude_cache:
+        _claude_cache[key] = _claude_analyze_and_write(
+            business_name=business_name, website=website, page_text=page_text,
+            signal=signal, signal_detail=signal_detail, biz_type=biz_type,
+            tech_stack=tech_stack, founder_name=founder_name,
+        )
+    return _claude_cache[key]
 
 
 def build_email_body(business_name: str, website: str, biz_type: str,
-                     tech_stack: list, observations: list) -> str:
-    ai = _ai_write_email(business_name, website, biz_type, tech_stack, observations)
-    if ai:
-        return ai
+                     tech_stack: list, observations: list,
+                     signal: str = "website_gap",
+                     signal_detail: str = "",
+                     contact_name: str = "",
+                     page_text: str = "",
+                     founder_name: str = "") -> str:
 
-    angle     = observations[0] if observations else "noticed something on your site worth flagging"
-    tech_note = tech_stack[0] if tech_stack else ""
+    # Claude is the brain — it reads the website and writes the email
+    analysis = _get_claude_analysis(
+        business_name, website, page_text, signal, signal_detail,
+        biz_type, tech_stack, founder_name or contact_name,
+    )
+    if analysis.get("email_body"):
+        return analysis["email_body"]
 
-    # Type-specific fallback templates — specific tools, specific deliverables
+    # Fallback (no API key or Claude error) — signal-aware static templates
+    greeting = f"Hey {contact_name or founder_name}," if (contact_name or founder_name) else "Hey,"
+    angle    = observations[0] if observations else "noticed something on your site"
+
+    if signal == "funding_raised" and signal_detail:
+        amount_m = re.search(r'\$[\d\.]+[MB]', signal_detail)
+        amount   = amount_m.group(0) if amount_m else "recent round"
+        return (
+            f"{greeting}\n\nSaw {business_name} raised {amount}. "
+            f"At that growth rate, manual ops become the first bottleneck. "
+            f"I build automation systems for post-funding teams — onboarding flows, "
+            f"reporting pipelines, CRM syncs. n8n or Make, 2-3 week build.\n\n"
+            f"Worth a quick call?\n\nEmmanuel"
+        ).strip()
+
+    if signal == "product_launch":
+        return (
+            f"{greeting}\n\nSaw {business_name} launched recently. "
+            f"The ops automation layer is cheapest to build now, before scale locks you in. "
+            f"User onboarding sequences, Slack alerts, tool syncs. n8n, 2-3 weeks.\n\n"
+            f"Worth a quick call?\n\nEmmanuel"
+        ).strip()
+
     if biz_type == "agency":
         return (
-            f"Hey,\n\n"
-            f"{angle}.\n\n"
-            f"I build automated reporting systems for agencies — data from GA, Meta, and your "
-            f"ad platforms formatted per client and emailed out automatically, built in n8n. "
-            f"Agencies usually recover 15-20 hours/week from manual reporting alone.\n\n"
-            f"Usually a 1-2 week build. Worth a quick call?\n\n"
-            f"Emmanuel"
+            f"Hey,\n\n{angle}.\n\n"
+            f"I build automated reporting for agencies — GA, Meta, ad platforms formatted "
+            f"per client and emailed automatically, built in n8n. "
+            f"Usually 15-20 hours/week recovered. 1-2 week build.\n\n"
+            f"Worth a quick call?\n\nEmmanuel"
         ).strip()
 
     if biz_type == "startup":
         return (
-            f"Hey,\n\n"
-            f"{angle}.\n\n"
-            f"I build internal automation for early-stage teams — new user onboarding sequences, "
-            f"Slack alerts, tool-to-tool data syncs, things that are manual now and break at scale. "
-            f"Usually n8n or Zapier, 2-3 week project.\n\n"
-            f"Worth a quick call?\n\n"
-            f"Emmanuel"
-        ).strip()
-
-    if tech_note == "Shopify" or biz_type == "ecommerce":
-        return (
-            f"Hey,\n\n"
-            f"{angle}.\n\n"
-            f"I set up the conversion stack for Shopify stores — live chat (Tidio or Gorgias), "
-            f"Klaviyo abandoned cart sequences, and automated review requests. "
-            f"Most stores see a measurable lift in the first 30 days.\n\n"
-            f"Usually a 1-week setup. Worth a quick call?\n\n"
-            f"Emmanuel"
+            f"Hey,\n\n{angle}.\n\n"
+            f"I build internal automation for early-stage teams — onboarding sequences, "
+            f"Slack alerts, data syncs between tools. Usually n8n, 2-3 week project.\n\n"
+            f"Worth a quick call?\n\nEmmanuel"
         ).strip()
 
     return (
-        f"Hey,\n\n"
-        f"{angle}.\n\n"
-        f"I do web and automation work — Shopify builds, Klaviyo email sequences, "
-        f"booking system integrations, that kind of thing. Usually 1-2 weeks depending on scope.\n\n"
-        f"Worth a quick call?\n\n"
-        f"Emmanuel"
+        f"Hey,\n\n{angle}.\n\n"
+        f"I do automation work — Klaviyo sequences, booking integrations, "
+        f"reporting pipelines. Usually 1-2 weeks depending on scope.\n\n"
+        f"Worth a quick call?\n\nEmmanuel"
     ).strip()
 
 
-def build_subject(business_name: str, observations: list, biz_type: str) -> str:
+def build_subject(business_name: str, observations: list, biz_type: str,
+                  signal: str = "website_gap", signal_detail: str = "",
+                  page_text: str = "", tech_stack: list = None,
+                  founder_name: str = "") -> str:
+    # Claude writes the subject line too
+    analysis = _get_claude_analysis(
+        business_name, "", page_text, signal, signal_detail,
+        biz_type, tech_stack or [], founder_name,
+    )
+    if analysis.get("subject"):
+        return analysis["subject"]
+
+    # Fallback subject lines
+    if signal == "funding_raised":
+        amount_m = re.search(r'\$[\d\.]+[MB]', signal_detail)
+        amount   = amount_m.group(0) if amount_m else "raise"
+        return f"Post-{amount} ops automation"
+
+    if signal == "product_launch":
+        return "Automation layer post-launch"
+
     if observations:
         obs = observations[0]
         if len(obs) < 55:
             return obs
 
     if biz_type == "agency":
-        # Short specific subjects for agencies
         obs = observations[0] if observations else ""
         if "report" in obs.lower():
-            return f"Automated client reporting for {business_name}"
-        if "portal" in obs.lower():
-            return f"Client portal gap — {business_name}"
-        if "schedul" in obs.lower():
-            return f"Content scheduling at {business_name}"
+            return f"Reporting automation for {business_name}"
         if "crm" in obs.lower():
             return f"CRM setup for {business_name}"
-        return f"Agency ops angle — {business_name}"
-
-    if biz_type == "startup":
-        return f"Automation layer for {business_name}"
+        return "Agency ops gap"
 
     return f"Quick thing on {business_name}"
 
@@ -703,16 +1212,20 @@ def create_prospect_node(business: dict, email: str,
                          body: str, analysis: dict, niche: str = "") -> Path:
     PROSPECTS_DIR.mkdir(parents=True, exist_ok=True)
 
-    name     = business.get("name", "")
-    website  = business.get("website", "")
-    phone    = business.get("formatted_phone_number", "")
-    address  = business.get("formatted_address", "")
-    source   = business.get("source", "maps")
-    biz_type = analysis.get("biz_type", "local")
-    category = business.get("category", niche)
-    min_proj = business.get("min_project", "")
-    tagline  = business.get("tagline", "")
-    batch    = business.get("batch", "")
+    name          = business.get("name", "")
+    website       = business.get("website", "")
+    phone         = business.get("formatted_phone_number", "")
+    address       = business.get("formatted_address", "")
+    source        = business.get("source", "maps")
+    biz_type      = analysis.get("biz_type", "local")
+    category      = business.get("category", niche)
+    min_proj      = business.get("min_project", "")
+    tagline       = business.get("tagline", "")
+    batch         = business.get("batch", "")
+    contact_name  = business.get("_contact_name", "")
+    contact_role  = business.get("_contact_role", "")
+    signal        = business.get("signal", "website_gap")
+    signal_detail = business.get("signal_detail", "")
 
     slug = _slugify(name)
     path = PROSPECTS_DIR / f"{slug}.md"
@@ -726,15 +1239,19 @@ def create_prospect_node(business: dict, email: str,
     tech_text = ", ".join(analysis.get("tech_stack", [])) or "unknown"
 
     source_note = {
-        "dr":    f"Found on DesignRush ({category} agencies).",
-        "yc":    f"YC company ({batch}). Tagline: {tagline}",
-        "maps":  f"Found via Google Maps search.",
+        "dr":  f"Found on DesignRush ({category} agencies).",
+        "yc":  f"YC company ({batch}). Tagline: {tagline}",
+        "maps": f"Found via Google Maps search.",
+        "ph":  f"ProductHunt launch. {signal_detail}",
+        "tc":  f"TechCrunch funding news. {signal_detail}",
     }.get(source, "Found via prospector.")
 
+    contact_line = f"\nContact: {contact_name} ({contact_role})" if contact_name else ""
+
     content = f"""---
-name: {name}
+name: {contact_name or name}
 company: {name}
-role: {"Founder" if biz_type == "startup" else "Owner"}
+role: {contact_role or ("Founder" if biz_type == "startup" else "Owner")}
 email: {email}
 phone: {phone}
 website: {website}
@@ -743,6 +1260,7 @@ category: {category}
 biz_type: {biz_type}
 niche: {niche}
 source: {source}
+signal: {signal}
 status: prospect
 outreach_sent_on:
 platform: cold
@@ -750,10 +1268,11 @@ sensitivity: private
 ---
 
 ## Context
-{source_note}
+{source_note}{contact_line}
 Website: {website}
 Tech stack: {tech_text}
 Type: {biz_type}
+Trigger: {signal_detail}
 
 ## Outreach Notes
 {body}
@@ -775,7 +1294,12 @@ def run_prospector(source: str = "maps", query: str = "", category: str = "",
                    auto: bool = False, dry_run: bool = False) -> None:
     from scripts.notify import send as tg_send
 
+    hunter_active = bool(HUNTER_KEY)
     print(f"\n[prospector] Source: {source} | Limit: {limit} | Auto: {auto} | Dry: {dry_run}")
+    if hunter_active:
+        print(f"[prospector] Hunter.io: enabled (decision-maker email finding active)")
+    else:
+        print(f"[prospector] Hunter.io: disabled (set HUNTER_API_KEY in config for better emails)")
 
     # Phase 1: Fetch businesses from the right source
     if source == "maps":
@@ -790,8 +1314,12 @@ def run_prospector(source: str = "maps", query: str = "", category: str = "",
         businesses = scrape_designrush(category, limit=limit)
     elif source == "yc":
         businesses = scrape_yc(industry=industry, limit=limit)
+    elif source == "ph":
+        businesses = scrape_producthunt(limit=limit)
+    elif source == "tc":
+        businesses = scrape_techcrunch_funding(limit=limit)
     else:
-        print(f"[prospector] Unknown source: {source}. Use maps | dr | yc")
+        print(f"[prospector] Unknown source: {source}. Use maps | dr | yc | ph | tc")
         return
 
     if not businesses:
@@ -813,9 +1341,11 @@ def run_prospector(source: str = "maps", query: str = "", category: str = "",
         page    = _new_context(browser).new_page()
 
         for i, biz in enumerate(businesses, 1):
-            name    = biz.get("name", "?")
-            website = biz.get("website", "")
-            src     = biz.get("source", source)
+            name          = biz.get("name", "?")
+            website       = biz.get("website", "")
+            src           = biz.get("source", source)
+            signal        = biz.get("signal", "website_gap")
+            signal_detail = biz.get("signal_detail", "")
             print(f"  [{i}/{len(businesses)}] {name}")
 
             if not website:
@@ -825,20 +1355,60 @@ def run_prospector(source: str = "maps", query: str = "", category: str = "",
 
             # Phase 2: Analyze website + extract email
             analysis = analyze_website_playwright(page, website, name, source=src)
-            email    = analysis.get("email", "")
             biz_type = analysis.get("biz_type", "local")
+
+            # Phase 2b: Try Hunter.io for decision-maker email
+            contact_name = ""
+            contact_role = ""
+            email        = ""
+
+            if hunter_active:
+                domain = re.sub(r'^https?://', '', website).split('/')[0]
+                hunter = find_decision_maker_email(domain)
+                if hunter:
+                    email        = hunter.get("email", "")
+                    contact_name = hunter.get("name", "")
+                    contact_role = hunter.get("role", "")
+                    conf         = hunter.get("confidence", 0)
+                    print(f"     Hunter: {email} ({contact_role}, {conf}% confidence)")
+
+            # Fall back to website-scraped email
+            if not email:
+                email = analysis.get("email", "")
 
             if not email:
                 print(f"     No email ({biz_type}) — skipping")
                 no_email.append(name)
                 continue
 
-            obs_count = len(analysis["observations"])
-            print(f"     Email: {email} | Type: {biz_type} | Issues: {obs_count}")
+            obs_count    = len(analysis["observations"])
+            page_text    = analysis.get("page_text", "")
+            founder_name = analysis.get("founder_name", "") or contact_name
 
-            # Phase 3: Write email
-            body    = build_email_body(name, website, biz_type, analysis["tech_stack"], analysis["observations"])
-            subject = build_subject(name, analysis["observations"], biz_type)
+            print(f"     Email: {email} | Type: {biz_type} | Issues: {obs_count} | Signal: {signal}")
+            if founder_name:
+                print(f"     Founder: {founder_name}")
+
+            # Phase 3: Claude reads the website and writes the email
+            body    = build_email_body(
+                name, website, biz_type,
+                analysis["tech_stack"], analysis["observations"],
+                signal=signal, signal_detail=signal_detail,
+                contact_name=founder_name,
+                page_text=page_text,
+                founder_name=founder_name,
+            )
+            subject = build_subject(
+                name, analysis["observations"], biz_type,
+                signal=signal, signal_detail=signal_detail,
+                page_text=page_text,
+                tech_stack=analysis["tech_stack"],
+                founder_name=founder_name,
+            )
+
+            # Enrich the biz dict with contact info for the prospect node
+            biz["_contact_name"] = founder_name
+            biz["_contact_role"] = contact_role
 
             if dry_run:
                 print(f"\n     [DRY RUN] Subject: {subject}")
@@ -877,7 +1447,8 @@ def run_prospector(source: str = "maps", query: str = "", category: str = "",
     print(f"  Skipped:  {len(skipped)} (no website)")
 
     if not dry_run:
-        source_label = {"maps": "Maps", "dr": f"DesignRush/{category}", "yc": f"YC/{industry}"}.get(source, source)
+        source_label = {"maps": "Maps", "dr": f"DesignRush/{category}", "yc": f"YC/{industry}",
+                        "ph": "ProductHunt", "tc": "TechCrunch Funding"}.get(source, source)
         tg_send(
             f"🎯 <b>Prospector [{source_label}]</b>\n\n"
             f"✅ {len(created)} {'sent' if auto else 'nodes created'}\n"
@@ -893,8 +1464,8 @@ def main():
         sys.stdout.reconfigure(encoding="utf-8")
 
     parser = argparse.ArgumentParser(description="Upwork OS — Multi-Source Prospector")
-    parser.add_argument("--source",   default="maps", choices=["maps","dr","yc"],
-                        help="Prospecting source: maps | dr (DesignRush agencies) | yc (default: maps)")
+    parser.add_argument("--source",   default="maps", choices=["maps","dr","yc","ph","tc"],
+                        help="Prospecting source: maps | dr | yc | ph (ProductHunt) | tc (TechCrunch funding)")
     parser.add_argument("--query",    default="", help="[maps] Search query")
     parser.add_argument("--category", default="", help=f"[dr] Category: {', '.join(DESIGNRUSH_CATEGORIES)}")
     parser.add_argument("--industry", default="", help=f"[yc] Industry: {', '.join(YC_INDUSTRIES)}")
