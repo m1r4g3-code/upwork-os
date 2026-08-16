@@ -66,6 +66,25 @@ THE KILL SHOT (open with this)
 
 ---
 
+### Step 3.5 — MEDDPICC Qualification Check (deals $10k+)
+
+Before the call on any deal that could reach $10k+, score the deal:
+
+- **M — Metrics:** Is the business impact quantified? (hours saved, cost eliminated, revenue unlocked?)
+- **E — Economic Buyer:** Have we spoken to the person who can sign without approval? If not, we do not have a qualified deal.
+- **D — Decision Criteria:** What does a good solution need to do for them?
+- **D — Decision Process:** Who else is involved? What is the sequence?
+- **P — Paper Process:** How long from verbal agreement to signed contract? (On deals over $25k, ask explicitly — deals die at contract stage when this is unknown.)
+- **I — Identify Pain:** What is the cost of doing nothing for 6 months?
+- **C — Champion:** Is there an internal advocate who will fight for this in rooms we're not in?
+- **C — Competition:** Who else is being evaluated?
+
+If the Economic Buyer has never been on a call: flag it before the call and plan for how to get to them.
+
+Full framework: `upwork/concepts/executive-presence.md`
+
+---
+
 ### Step 4 — Save the brief
 
 Save to `outputs/intel/YYYY-MM-DD-call-prep-[slug].md`:
@@ -87,15 +106,37 @@ Opening: "[exact words]"
 ## RESEARCH GAPS (fill before the call)
 [checklist — what to verify in the 15 min before]
 
-## QUESTION STACK
-[Current State] ...
-[Problem Depth] ...
-[Stakes] ...
-[Technical] ...
-[Decision] ...
+## QUESTION STACK — SPIN Framework (8 questions, ordered by call phase)
+
+**Situation (2 questions) — understand current state without interrogating:**
+  [S1] "Walk me through how [process] works for you today — who's involved and where does it live?"
+  [S2] "How long has that been the setup?"
+
+**Problem (2 questions) — surface explicit pain:**
+  [P1] "Where does that break down most for you?"
+  [P2] "How are you handling [the problem] right now when it happens?"
+
+**Implication (3 questions) — make them feel the cost of inaction:**
+  These are the highest-value questions. Let them land. Don't rush to solve.
+  [I1] "When [problem occurs] — what decisions are being made without that data in the meantime?"
+  [I2] "If this continues scaling, what happens to [team / margin / operations] in 6-12 months?"
+  [I3] "What opportunities have you missed because this wasn't automated?"
+
+**Need-Payoff (1 question) — let them articulate the value in their own words:**
+  [N1] "If this worked the way you wanted — how much time / money / capacity does that free up?"
+
+Research: SPIN Selling data across 35,000 calls proves Implication questions are the single greatest
+differentiator between successful and unsuccessful discovery conversations. Run all 3. Let the client answer.
+Do not fill the silence. Full framework: `upwork/concepts/spin-gap-selling-discovery.md`
 
 ## RED FLAGS TO LISTEN FOR
 [signals that change the strategy]
+
+## MEDDPICC (deals $10k+ only)
+  Economic Buyer confirmed: [YES / NO — name]
+  Pain quantified: [YES / NO — number]
+  Paper process asked: [YES / NO — timeline]
+  Champion identified: [YES / NO — name]
 
 ## CLOSE SCRIPT
 [exact words to end with a concrete next step]

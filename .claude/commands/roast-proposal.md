@@ -29,6 +29,9 @@ furthermore, moreover, additionally, in conclusion, it is worth noting, it is im
 **Vague filler:**
 various, numerous, multiple (when a number would work), a wide range of, a variety of, in a timely manner, as needed, as required
 
+**Significance-inflation vocabulary (Wikipedia-sourced, post-2023 AI density surge):**
+delve, garner, intricate, intricacies, interplay, tapestry, testament, bolstered, enduring, meticulous, meticulously, pivotal, fostering, showcasing, vibrant, serves as, stands as, functions as, underscores, underscoring
+
 ---
 
 ### 2. BIG GRAMMAR — sounds like a report, not a person
@@ -185,6 +188,71 @@ If fewer than 2 drifts present: flag and add more.
 
 ---
 
+### 13. COPULATIVE REPLACEMENT — "is" disguised as performance
+
+AI replaces basic verbs with marketing verbs that perform significance without adding it.
+
+Flag every instance of:
+- "serves as" / "stands as" / "marks" / "functions as" / "operates as" / "represents" — used where "is" or "are" would work
+- "features" / "offers" / "maintains" / "boasts" — used where "has" would work
+
+Fix: use "is," "are," "has." Flat and specific beats inflated and hollow.
+
+---
+
+### 14. NEGATIVE PARALLELISMS — AI's contrast template
+
+AI explains by clearing a misconception first. Humans state things directly.
+
+Flag any construction:
+- "Not only X, but also Y" / "Not just X, it's Y"
+- "It's not X, it's Y" / "No X, no Y, just Z"
+- "X rather than Y" used more than once per proposal
+
+Fix: cut the negation frame. State the positive directly.
+
+---
+
+### 15. TRAILING PRESENT PARTICIPLES — vague significance at sentence end
+
+AI tacks "-ing" phrases to sentence ends to create the feeling of depth without stating anything specific.
+
+Flag:
+- "...helping to ensure X"
+- "...contributing to the overall Y"
+- "...fostering understanding of"
+- "...highlighting the importance of"
+- Any gerund phrase at sentence end that adds no concrete information
+
+Fix: cut the trailing phrase. The sentence works without it. If it doesn't — the sentence was always thin. Rewrite it.
+
+---
+
+### 16. ELEGANT VARIATION — synonym substitution to avoid repetition
+
+AI avoids repeating words by substituting synonyms. This produces inconsistent terminology — the same thing referred to by three different names in six sentences. Humans pick a word and use it.
+
+Watch for:
+- One tool or concept named two or three different ways in quick succession
+- A synonym that feels slightly off (the right word swapped for its thesaurus entry)
+- "The automation," "the pipeline," "the workflow," "the system" — all meaning the same thing in one proposal
+
+Fix: pick one term. Use it consistently. Repetition reads as clarity. Variation reads as automation.
+
+---
+
+### PSYCHOLOGICAL WEAPONS CHECKLIST (composite 75+ or budget $1k+)
+
+If the job scored 75+ or budget was $1k+, check these before scoring. These fire on top of everything above.
+
+- **Zeigarnik loop in lines 1-2?** Opener leaves something unresolved the brain must close. A complete thought in line 1 = loop not open. Rewrite.
+- **Loss quantified with a number AND a category escalation?** "Can cause problems" fails. "At 20 videos/day, one bug = 20 wrong publishes — that's a brand problem, not a tech problem" passes.
+- **Mirror hook specific enough to visualize in real time?** "I'd implement error handling" fails. "I'd trigger two jobs simultaneously before touching a single node" passes.
+- **Endowment picture present before the close?** One sentence, present tense, their life after. Optional on short proposals. Expected on long ones.
+- **P.S. references something specific from THEIR post?** "Looking forward to working with you" fails. "You mentioned race conditions — that usually means you've seen this break once" passes.
+
+---
+
 ## How to run the roast
 
 ### Input
@@ -245,6 +313,25 @@ REGISTER DRIFT COUNT
   [N drifts found, minimum is 2]
   Markers present: [list them]
 
+COPULATIVE REPLACEMENT
+  [instances of "serves as," "stands as," "functions as" or "features/boasts/offers" for "has" — or "none"]
+
+NEGATIVE PARALLELISMS
+  [instances of "not only X but Y" / "it's not X, it's Y" — or "none"]
+
+TRAILING PARTICIPLES
+  [...contributing to / ...helping to ensure / etc. — or "none"]
+
+ELEGANT VARIATION
+  [same concept named 2+ different ways — or "none"]
+
+PSYCHOLOGICAL WEAPONS (composite 75+ or budget $1k+ only)
+  Zeigarnik loop in lines 1-2: [YES / NO — quote the opener if NO]
+  Loss quantified + category escalated: [YES / NO — quote or flag]
+  Mirror hook visualizable in real time: [YES / NO — quote or flag]
+  Endowment picture before close: [present / absent]
+  P.S. specific to their post: [YES / NO]
+
 FINAL VERDICT
   [2-3 sentences. Brutally honest. What is the biggest single problem?
    If sent as-is, what would a client scanning 20 proposals think?]
@@ -280,7 +367,7 @@ Same rules as write-proposal:
 - No em dashes (use period, comma, or ...)
 - No hyphens in compound words ("low confidence" not "low-confidence", "follow up" not "follow-up")
 - First word cannot be "I"
-- 150-250 words
+- 275-325 words
 - No banned phrases
 - At least 2 register drifts (not 1)
 - At least one specific operational detail with proper noun, number, or named failure

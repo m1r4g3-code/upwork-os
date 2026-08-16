@@ -37,6 +37,24 @@ ALL THREE of the following?
     Full pipeline below.
 ```
 
+**PROFILE READINESS GATE — check before spending connects:**
+
+On new account sessions (within first 45 days of account creation), confirm BEFORE writing any proposal:
+- Profile is 100% complete (Upwork shows completion meter in profile editor)
+- Available Now badge is on
+- At least 3 portfolio pieces are live with multi-image thumbnails
+- Keyword count: "n8n" appears 6+ times on the live profile (Ctrl+F check)
+
+If any are missing: flag it. Spending connects before the profile is indexed = wasted connects. Profile suppression = proposals enter the "Other Proposals" bucket. Fix the profile first.
+
+---
+
+**WEISS CONCEPTUAL AGREEMENT GATE (deals $10k+, client has already reached out):**
+
+If the client has replied and the budget is $10k+: do NOT write a full proposal or SOW yet. Book the discovery call first. Get verbal agreement on (1) objectives, (2) how success is measured, (3) what the outcome is worth. Then write the proposal as a confirmation, not a pitch. Proposals with prior agreement close at 80%+. Without it: under 20%.
+
+Exception: cold Upwork proposals where no prior contact exists — proceed with the standard pipeline. The proposal is the initiation.
+
 ---
 
 ## Pipeline
@@ -59,9 +77,27 @@ Read the output brief: extracted budget, stack, red flags, green flags, client s
 
 ### Step 2 — Intel Pass
 
+**Step 2a — Identify Business Model First (deals $5k+ or complex scope)**
+
+Before researching their specific setup, identify their industry. Every industry has specific metrics that drive decisions. Using those metrics in the observation proves business understanding. Not using them proves you only read the job post.
+
+| Industry | Core metrics to name | Common pain |
+|---|---|---|
+| Engineering / Construction | WIP, utilization rate, project margin, aged receivables | Reporting scales with projects, cash flow visibility |
+| Agencies (marketing, dev, design) | Billable hours, realization rate, client churn, retainer mix | Manual reporting, client communication volume |
+| E-commerce | GMV, CAC, LTV, return rate, inventory turnover | Manual order ops, abandoned cart, post-purchase flows |
+| SaaS | MRR/ARR, churn, NRR, expansion revenue | Onboarding, support volume, churn signals |
+| Professional services (law, finance, consulting) | Utilization, realization, leverage ratio, matter management | Billing, document management, client reporting |
+| Manufacturing | OEE, throughput, defect rate, on-time delivery | Production tracking, supplier comms |
+
+Full library: `upwork/concepts/business-model-library.md`
+
+**Step 2b — Research their specific setup**
+
 Research their website/business using available data:
 - What specific gap, mistake, or opportunity is visible from their post or site?
 - Not general pain — a *specific finding* about their actual setup
+- If possible: name at least one industry-specific metric in the observation
 - One sharp observation > three generic ones
 
 ---
@@ -72,6 +108,7 @@ From the job text and client history, determine:
 - **Archetype:** match to `hephzibah-brain-temp/upwork/playbooks/client-types.md`
 - **Real fear:** what are they actually afraid of? (not what the post says)
 - **What they need to believe:** to hire Emmanuel over someone cheaper
+- **Commercial Reframe:** What is a non-obvious truth about their problem they did NOT name in the post? Not a solution — a deeper or adjacent problem that costs more than the one they stated. If nothing genuinely non-obvious exists, skip. Never force a fake reframe.
 
 ---
 
@@ -88,19 +125,66 @@ Closing question rules:
 
 ---
 
+### Step 4.5 — Psychological Weapons Pre-flight (composite 75+ or budget $1k+)
+
+Before drafting, decide how each weapon deploys. Skip this step only for low-score or micro-budget jobs.
+
+Full framework: `upwork/concepts/proposal-psychology-weapons.md`
+
+Decisions to lock before writing:
+
+```
+ZEIGARNIK LOOP (line 1-2):
+  What incomplete thing opens the proposal that their brain must close?
+  Format: "There are [N] places [X] breaks. [N-1] are obvious. One [does scary thing]."
+  Or any opener that names a gap without filling it.
+
+COMMERCIAL REFRAME (line 3-4):
+  What truth do we teach them about their own problem that they did NOT name?
+  Must be: non-obvious, real, more expensive than the stated problem.
+  If no genuine reframe exists: skip this weapon. Never fabricate.
+
+LOSS FRAMING (line 5-7):
+  What is the specific, quantified loss of staying with the wrong approach?
+  Formula: "[number] + [concrete outcome] + [category escalation]"
+  Example: "At 20 videos/day, one bug = 20 wrong videos published. Not a technical problem. Brand problem."
+
+MIRROR NEURON HOOK (line 8-9):
+  What specific action would Emmanuel take first, described vividly enough to visualize?
+  Must be specific enough that someone watching can picture it in real time.
+  Example: "First thing I'd do is trigger two jobs simultaneously before touching a single node."
+
+ENDOWMENT PICTURE (after proof, before close):
+  One sentence. Present tense. Their life after the problem is solved.
+  Makes the client mentally own the outcome before hiring.
+  Example: "Picture Monday morning: 12 videos in review, logs clean, nothing published without sign-off."
+
+P.S. LINE (Peak-End Rule):
+  Last thing they read. Most human line. Slightly unexpected.
+  References something specific from their post that proves you actually read it.
+```
+
+---
+
 ### Step 5 — Draft Pass
 
 Write the proposal. Hard constraints:
 
 **Structure:**
 ```
-[Opener — 1 sentence. Start with THEIR situation. Not "I".]
-[Body — proof + specifics. Bullets optional, NOT required.]
-[Loom link placeholder or portfolio proof — 1 line]
-[Low-friction closing question — 1 sentence]
+[Line 1-2:  ZEIGARNIK LOOP — incomplete opener the brain must close]
+[Line 3-4:  COMMERCIAL REFRAME — the thing they don't know yet (skip if no genuine reframe)]
+[Line 5-7:  LOSS FRAMING — quantified loss + category escalation (cortisol build)]
+[Line 8-9:  MIRROR NEURON HOOK — specific action described vividly enough to visualize]
+[Line 10-11: PROOF — proper noun + specific number + named failure or friction]
+[Line 12:   ENDOWMENT PICTURE — their life after, present tense, one sentence]
+[Line 13:   ZEIGARNIK CLOSE — low friction question, opens a loop]
+[P.S.:      PEAK-END RULE — most human line, slightly unexpected, specific to their post]
 ```
 
-**Length:** 150-250 words. No exceptions.
+Not every weapon fires on every proposal. The Zeigarnik opener and P.S. line are always present. The commercial reframe only fires when there is a genuine non-obvious truth. The endowment picture can be cut on very short proposals. The sequence above is the ideal; compress when word count forces it.
+
+**Length:** 250-325 words. (Research: 275-325 words converts at 14.7% vs under-200 at 3.2%. The additional words for loss framing and endowment picture are what earn this range.)
 
 **First word:** Cannot be "I"
 
@@ -226,6 +310,32 @@ AI hides consultant language inside casual sentence structure. Watch for these:
 
 A casual sentence wrapped around a consultant phrase is still consultant text.
 
+**8. No copulative replacement**
+
+AI replaces "is" and "has" with verbs that perform significance without adding it. These pass every word-level filter but feel elevated in a way that reads as generated.
+
+Flag: "serves as" / "stands as" / "functions as" / "operates as" / "represents" — used where "is" would work. "features" / "offers" / "maintains" / "boasts" — used where "has" would work.
+
+Fix: use "is," "are," "has." Flat and specific beats inflated and hollow every time.
+
+**9. No negative parallelisms**
+
+AI explains by clearing a misconception: "Not only X, but also Y." "It's not X, it's Y." "No X, no Y, just Z." Humans state things directly without negating a straw-man first.
+
+If a sentence starts by negating something the client never claimed, cut it and state the point directly.
+
+**10. No trailing present participles**
+
+AI adds "-ing" phrases at sentence ends to create the feeling of depth: "...helping to ensure reliability," "...contributing to overall performance," "...fostering greater alignment." The phrase adds no information.
+
+Test: delete the trailing phrase. If the sentence still makes sense — it always made sense without it. Cut the dead weight.
+
+**11. No elegant variation**
+
+AI avoids repeating words by substituting synonyms. Result: the same concept called three different things across four sentences. Humans pick a word and use it.
+
+If "the workflow," "the automation," "the pipeline," and "the system" all refer to the same thing in one proposal — pick one and use it throughout. Repetition reads as clarity. Variation reads as thesaurus noise.
+
 ---
 
 ### Step 6 — Voice Check
@@ -257,6 +367,13 @@ Criteria that block output (must fix before saving):
 - Proof point with no proper noun, no number, no date, no named failure
 - Zero coherence breaks (every sentence cleanly follows the previous)
 - Corporate-speak in casual wrapper ("built in from the start", "from day one", "end-to-end")
+
+**Psychological Weapons Checklist (composite 75+ or budget $1k+):**
+- Line 1-2 opens an incomplete loop the brain is compelled to close? If first line is a complete thought, rewrite.
+- Loss is quantified with a number AND names a category escalation (technical problem, brand problem, ops problem)? If abstract, rewrite.
+- Action described in the proof/mirror section is specific enough to visualize in real time? "I'd implement error handling" fails. "I'd trigger two jobs simultaneously and watch what fails" passes.
+- Endowment picture present in present tense before the close? If not and word count allows, add it.
+- P.S. line references something specific from their post, not a generic pleasantry?
 
 Fix all blockers, then re-run the roast mentally. Only output when the proposal would score 7+.
 

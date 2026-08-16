@@ -103,3 +103,32 @@ Upwork's private survey goes out at contract close. Client sentiment at that exa
 
 **Delivery summary framing:**
 Not "here's what I built" — "here's what changed for your business and how to keep it running."
+
+---
+
+## 7-Day Retainer Conversion Sequence
+
+Do NOT pitch a retainer at project close — it reads as desperate and abrupt. Do NOT wait more than a week — the relationship goes cold. The sequence below converts without pitching.
+
+**Day 0 (delivery message):** After the main deliverables, include a diagnostic note naming the next two risks the client will hit — not a pitch, an expert observation. Example: "One thing to watch in the next 30 days: if your lead volume spikes past X/day, the dedup logic will need adjustment before it becomes a problem." This plants the idea that work continues without asking for it.
+
+**Day 3:** Send a one-page Decision Memo as a formatted document (not a casual chat message). Structure:
+```
+What changed since project start
+Why it matters to their operation
+Evidence (one specific metric or result from the delivery)
+Recommended next bets (2-3 specific, short)
+Blocked risks you see coming (1-2)
+5-7 KPIs to track going forward
+```
+Close the memo with: "If extending coverage would be useful, I can scope a 30-day plan. Otherwise, great working together."
+
+**Days 5-7:**
+- If they engaged with the memo: send a formal retainer scope with rate and structure.
+- If silent: one follow-up referencing the specific Day 0 risk. "Following up on the [specific risk] I flagged — let me know if you'd like to address that before it becomes an issue."
+
+**Mechanics:** Use Upwork's "Propose New Contract" feature inside the existing message thread. This keeps the relationship continuous — the client does not have to post a new job or find you again.
+
+**Pricing rule:** 70-90% of the equivalent project-based monthly rate. Never below 60%. Frame it as a "predictability premium" — they get stability, you get stability. A 3-retainer base at $4k/month each generates $21,600/year more than equivalent new-client billing at 20% Upwork fees.
+
+Full framework: `upwork/concepts/trust-equation-client-retention.md`

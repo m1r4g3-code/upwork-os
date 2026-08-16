@@ -1395,7 +1395,7 @@ Emmanuel's voice is: **direct, specific, confident, slightly senior, a little Ni
 
 **Voice checklist:**
 - ✓ First word is not "I"
-- ✓ Length: 150–250 words
+- ✓ Length: 275–325 words
 - ✓ Contains at least one specific insight about THEIR situation
 - ✓ One sharp question at the end
 - ✓ Proof is relevant (not just "I have 3 years experience")
