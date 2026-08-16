@@ -1,0 +1,587 @@
+================================================================================
+PRESSFLOW — PRODUCT REQUIREMENTS DOCUMENT
+Version: 1.0
+Status: Final Draft
+Author: Emmanuel Adekoya
+================================================================================
+
+
+1. PRODUCT OVERVIEW
+───────────────────
+
+PressFlow is a local-first, always-on speech-to-text desktop utility for Windows.
+The user holds a configurable hotkey, speaks, releases the hotkey, and the
+transcribed text is pasted at their cursor — in any application — within 2 seconds.
+
+No cloud. No subscription. No account. Runs entirely on device.
+
+The product is spiritually identical to WhisperFlow and Superwhisper: a floating
+pill UI, push-to-talk recording, OpenAI Whisper transcription (local model), and
+instant clipboard injection. The difference is that this is open-source, offline,
+and owned.
+
+
+2. PROBLEM STATEMENT
+────────────────────
+
+Typing is slow. Voice-to-text on Windows (built-in Win+H) requires a Microsoft
+account, sends audio to Microsoft servers, is inaccurate on non-American accents,
+and does not work across all applications consistently.
+
+Commercial alternatives (WhisperFlow, Superwhisper) cost $8–$12/month or are
+macOS-only.
+
+The open-source stack to solve this already exists:
+  - faster-whisper: a local Whisper runtime, 4x faster than openai-whisper
+  - sounddevice: mic capture with numpy output
+  - keyboard: global hotkey interception
+  - pyautogui / pyperclip: clipboard injection
+
+No one has assembled these into a polished, production-quality Windows utility.
+PressFlow is that assembly.
+
+
+3. GOALS
+────────
+
+G1. Hotkey-to-paste latency ≤ 2.0s for clips up to 30 seconds (small model, CPU)
+G2. Works in ANY foreground window without focus management hacks
+G3. Zero internet dependency after first model download
+G4. Memory footprint ≤ 400MB at idle (model loaded in RAM)
+G5. Visually indistinguishable from WhisperFlow in UX feel
+
+
+4. NON-GOALS
+────────────
+
+NG1. Real-time streaming transcription (push-to-talk is more accurate)
+NG2. Speaker diarization or multi-speaker support
+NG3. Transcription history / search
+NG4. Mobile companion app
+NG5. Cloud model API fallback (Whisper API, Deepgram, etc.)
+NG6. Translation (transcription only, in source language)
+NG7. macOS or Linux support in v1
+
+
+5. USER STORIES
+───────────────
+
+US1. As a user writing a proposal, I hold Right Alt, dictate a paragraph, release,
+     and the text appears in the Upwork text box without me touching the keyboard.
+
+US2. As a user replying to a Slack message, I press the hotkey, say my reply,
+     release, and it appears in the message field ready to send.
+
+US3. As a user who made a mistake, I can undo the paste with Ctrl+Z immediately
+     after it appears — the paste must be undoable as a single operation.
+
+US4. As a user who changed their mic or hotkey preference, I right-click the tray
+     icon, open Settings, change the value, and it takes effect without restart.
+
+US5. As a user on a slow machine, I see a "Transcribing..." state in the floating
+     UI so I know the app is working and have not lost my recording.
+
+
+6. FUNCTIONAL REQUIREMENTS
+──────────────────────────
+
+FR-01  HOTKEY REGISTRATION
+      The app SHALL register a global hotkey at boot.
+      The hotkey MUST intercept the key system-wide (not just when app is focused).
+      Default hotkey: Right Alt.
+      The hotkey SHALL be configurable from the Settings panel without app restart.
+      If the chosen hotkey is already registered by another process, the app SHALL
+      notify the user via tray tooltip and fall back to a secondary default (F13).
+
+FR-02  RECORDING
+      Recording SHALL start on hotkey keydown event.
+      Recording SHALL stop on hotkey keyup event.
+      Audio SHALL be captured at 16000 Hz, 1 channel (mono), float32 dtype.
+      Audio SHALL be accumulated in a numpy array in memory. No temp files on disk.
+      If recording duration < 300ms on release, the recording SHALL be discarded
+      silently (accidental tap protection).
+      If recording exceeds 120s, recording SHALL auto-stop and proceed to transcription.
+      The app SHALL display the floating pill UI the moment recording starts.
+
+FR-03  TRANSCRIPTION
+      Transcription SHALL use faster-whisper with the "small" model.
+      The model SHALL be loaded into RAM at app startup (not on first use) to
+      eliminate first-use latency.
+      Model location: faster-whisper default cache (~/.cache/huggingface/hub/).
+      If the model is not cached, the app SHALL download it on first boot with a
+      visible progress indicator in the tray tooltip ("Downloading model: 42%").
+      Transcription input: the in-memory numpy audio buffer.
+      Transcription SHALL run in a background thread so the main thread remains
+      responsive.
+      Language: auto-detect. User may pin a language code in Settings ("en", "fr",
+      etc.) to skip auto-detect and improve speed by ~15%.
+      Word timestamps: disabled (not needed for paste use case — saves compute).
+
+FR-04  TEXT INJECTION
+      After transcription, the resulting text SHALL be injected at the current
+      cursor position in the foreground application.
+      Injection method (in priority order):
+        1. Save current clipboard content.
+        2. Write transcribed text to clipboard.
+        3. Fire Ctrl+V via pyautogui.hotkey().
+        4. Restore previous clipboard content after 500ms delay.
+      Trailing space: append one space after transcribed text (configurable).
+      Capitalization: preserve exactly as Whisper returns it — no normalization.
+      The paste SHALL be a single undoable action (Ctrl+Z reverses the full paste).
+
+FR-05  FLOATING PILL UI
+      A non-interactive floating overlay SHALL appear at recording start.
+      Visual design: rounded pill capsule, dark semi-transparent background (#1A1A1A,
+      85% opacity), positioned bottom-center of the primary monitor by default.
+      The pill SHALL be draggable to any screen position. Position persists across
+      sessions in config.json.
+      The pill SHALL NOT steal focus from the foreground window under any
+      circumstance. Window flags: always-on-top, no taskbar entry, no focus steal.
+
+      States and their UI:
+        RECORDING:      Red pulsing dot + live waveform bar animation + duration counter
+                        Example: ● ▁▃▇▅▂ 0:04
+        TRANSCRIBING:   Spinner + "Transcribing..." label, no timer
+                        Example: ◌ Transcribing...
+        DONE:           Green checkmark, fades out in 600ms
+                        Example: ✓
+        ERROR:          Red X + short error label, fades out in 2000ms
+                        Example: ✗ No mic detected
+
+      The waveform animation is a live visualization of the audio input amplitude
+      (5-bar visualizer updating at 30fps from the sounddevice input stream).
+
+FR-06  SYSTEM TRAY
+      The app SHALL run as a system tray process with no main window.
+      Tray icon states:
+        Idle:       Grey microphone icon
+        Recording:  Red microphone icon
+        Error:      Yellow warning icon
+      Right-click context menu:
+        - Settings
+        - Pause / Resume (toggles hotkey listener)
+        - About (version + GitHub link)
+        - Quit
+      Double-click tray icon: open Settings panel.
+
+FR-07  SETTINGS PANEL
+      A minimal settings window accessible from the tray menu.
+      Fields:
+        - Hotkey: key capture input (click field, press key to assign)
+        - Model: dropdown (tiny / base / small / medium) — small is default
+        - Language: text input (leave blank for auto-detect)
+        - Paste method: dropdown (Clipboard inject / Typewrite fallback)
+        - Trailing space: checkbox (default: on)
+        - Launch at Windows startup: checkbox (default: off)
+      Save button applies changes immediately. Cancel reverts.
+      No restart required for any setting change.
+
+FR-08  STARTUP BEHAVIOR
+      At launch:
+        1. Load config.json (create with defaults if missing)
+        2. Load faster-whisper model into RAM (background thread, show tray tooltip)
+        3. Register global hotkey
+        4. Show tray icon
+        5. Ready — no splash, no window
+      Total time from exe launch to ready: ≤ 8 seconds on first cold boot with
+      model cached. Model download (first ever run) may take 1-3 minutes depending
+      on connection — progress shown in tray tooltip.
+
+FR-09  ERROR HANDLING
+      See Section 9 (Error Handling Matrix).
+
+FR-10  CONFIGURATION PERSISTENCE
+      All settings persisted to config.json in the app directory.
+      config.json is human-readable and hand-editable.
+      Corrupt or missing config: app regenerates with defaults, does not crash.
+
+
+7. NON-FUNCTIONAL REQUIREMENTS
+────────────────────────────────
+
+NFR-01  LATENCY
+        Recording → paste completion (30s clip, small model, CPU):  ≤ 2.0s
+        Recording → paste completion (10s clip, small model, CPU):  ≤ 1.2s
+        App boot → ready state (model cached):                      ≤ 8.0s
+
+NFR-02  MEMORY
+        Idle (model loaded, listener active):   ≤ 400MB RSS
+        Peak during transcription:              ≤ 650MB RSS
+
+NFR-03  CPU
+        Idle:                  < 0.5% CPU (listener is event-driven, not polling)
+        During transcription:  < 100% of one core (single-threaded Whisper)
+
+NFR-04  RELIABILITY
+        The hotkey listener SHALL NOT crash on hotkey conflicts — handle gracefully.
+        The app SHALL NOT crash if the mic is disconnected mid-recording.
+        The app SHALL NOT corrupt the user's clipboard if it crashes during paste.
+
+NFR-05  COMPATIBILITY
+        Target OS: Windows 10 (22H2+) and Windows 11.
+        Minimum RAM: 4GB system RAM (model requires ~300MB, rest for OS).
+        Python: 3.10 or 3.11.
+        No CUDA required. CPU inference only in v1. GPU path optional in v2.
+
+
+8. SYSTEM ARCHITECTURE
+──────────────────────
+
+8.1  State Machine
+
+  ┌─────────┐  keydown   ┌───────────┐  keyup    ┌─────────────┐
+  │  IDLE   │──────────►│ RECORDING │──────────►│ TRANSCRIBING│
+  └─────────┘           └───────────┘           └─────────────┘
+       ▲                                                │
+       │                      done                     │
+       └────────────────────────────────────────────────┘
+                         (paste → restore → idle)
+
+  ERROR state is reachable from RECORDING and TRANSCRIBING.
+  ERROR → IDLE after error display timeout.
+
+8.2  Component Data Flow
+
+  [keyboard listener]
+        │ keydown / keyup events
+        ▼
+  [RecorderThread]
+        │ starts/stops sounddevice stream
+        │ accumulates numpy float32 buffer
+        │ on stop: emits (audio_array, sample_rate) signal
+        ▼
+  [TranscriberThread]
+        │ receives audio_array
+        │ runs faster_whisper.WhisperModel.transcribe()
+        │ emits (text: str) signal
+        ▼
+  [Paster]
+        │ saves clipboard
+        │ writes text to clipboard
+        │ fires Ctrl+V
+        │ restores clipboard after 500ms
+        ▼
+  [StateEmitter]  ──► [FloatingPill UI]  (state changes drive UI)
+                  ──► [TrayIcon]         (icon color changes)
+
+8.3  Threading Model
+
+  Main thread:    Qt event loop (tray + floating pill + settings window)
+  Thread-2:       keyboard hotkey listener (blocking loop)
+  Thread-3:       sounddevice audio capture (callback-based stream)
+  Thread-4:       faster-whisper transcription (spawned per recording)
+
+  Threads communicate via Qt signals/slots (thread-safe).
+  No shared mutable state between threads — audio buffer ownership
+  transfers from Thread-3 to Thread-4 on keyup.
+
+
+9. MODULE CONTRACTS
+───────────────────
+
+recorder.py
+  class Recorder:
+    signals:
+      recording_started()
+      recording_stopped(audio: np.ndarray, sample_rate: int)
+      audio_level_update(amplitude: float)   # 30fps, for waveform viz
+    methods:
+      start() → None
+      stop() → None   # emits recording_stopped signal
+
+transcriber.py
+  class Transcriber:
+    __init__(model_size: str, language: str | None)
+    signals:
+      transcription_done(text: str)
+      transcription_error(message: str)
+    methods:
+      load_model() → None   # called at startup, blocks until ready
+      transcribe(audio: np.ndarray, sample_rate: int) → None   # async
+
+paster.py
+  class Paster:
+    paste(text: str, method: Literal["clipboard", "typewrite"]) → None
+    # saves clipboard before, restores after 500ms
+    # raises PasteError if both methods fail
+
+pill.py
+  class FloatingPill(QWidget):
+    set_state(state: Literal["recording", "transcribing", "done", "error"],
+              message: str = "") → None
+    set_amplitude(value: float) → None   # drives waveform bars
+
+config.py
+  class Config:
+    load(path: str) → Config
+    save() → None
+    hotkey: str
+    model: str
+    language: str
+    paste_method: str
+    trailing_space: bool
+    startup_with_windows: bool
+    pill_position: tuple[int, int]
+
+
+10. DEPENDENCY SPECIFICATION
+────────────────────────────
+
+Package              Version     Reason
+──────────────────── ─────────── ──────────────────────────────────────────
+faster-whisper       ≥ 1.0.0     Local Whisper inference (CTranslate2 backend)
+sounddevice          ≥ 0.4.6     Mic capture → numpy float32 directly
+numpy                ≥ 1.24.0    Audio buffer type; already a faster-whisper dep
+keyboard             ≥ 0.13.5    Global hotkey listener, Windows system-level
+pyperclip            ≥ 1.8.2     Clipboard read/write (cross-app)
+pyautogui            ≥ 0.9.54    Ctrl+V injection; typewrite fallback
+PyQt6                ≥ 6.6.0     Floating pill UI, tray, settings window
+PyQt6-Qt6            ≥ 6.6.0     Qt6 runtime (bundled with PyQt6)
+Pillow               ≥ 10.0.0    Tray icon image loading
+
+Notes:
+- PyQt6 is chosen over tkinter (no system tray), wx (complex), or PySimpleGUI
+  (no always-on-top without hacks). PyQt6 has native Windows tray + layered
+  window support required for the floating pill.
+- keyboard requires running as administrator OR adding the script to a UAC
+  exception for system-wide hotkey interception. Document this in README.
+- sounddevice requires PortAudio. On Windows this ships with the wheel — no
+  separate install needed.
+- faster-whisper requires the Microsoft Visual C++ Redistributable (MSVC 2019+).
+  Ship an installer that checks for this.
+
+requirements.txt:
+  faster-whisper>=1.0.0
+  sounddevice>=0.4.6
+  numpy>=1.24.0
+  keyboard>=0.13.5
+  pyperclip>=1.8.2
+  pyautogui>=0.9.54
+  PyQt6>=6.6.0
+  Pillow>=10.0.0
+
+
+11. ERROR HANDLING MATRIX
+──────────────────────────
+
+Error                        Detection Point       Behavior
+──────────────────────────── ───────────────────── ──────────────────────────────
+No microphone detected       Recorder.start()      Pill shows ✗ "No mic found"
+                                                   Tray icon → yellow warning
+                                                   State → IDLE after 2s
+
+Hotkey already registered    App startup           Tray tooltip: "Hotkey conflict:
+                                                   Right Alt taken. Using F13."
+                                                   Silently fall back to F13.
+
+Recording too short (<300ms) Recorder.stop()       Discard audio, no pill shown,
+                                                   state stays IDLE silently.
+
+Transcription failure        Transcriber thread    Pill shows ✗ "Transcription failed"
+                                                   Log exception to pressflow.log
+                                                   State → IDLE after 2s
+
+Paste failure (both methods) Paster.paste()        Pill shows ✗ "Paste failed — check
+                                                   clipboard"
+                                                   Text still in clipboard so user
+                                                   can manually Ctrl+V.
+
+Model not found / corrupt    App startup           Download prompt via tray tooltip.
+                                                   If download fails: tray tooltip
+                                                   shows error, app runs but
+                                                   hotkey is disabled.
+
+Elevated window focus        Paster.paste()        pyautogui Ctrl+V fails silently.
+(admin app in foreground)                          Fall back to typewrite method.
+                                                   If typewrite also fails: paste
+                                                   error shown.
+
+App crash during paste       OS-level             Clipboard not restored. User must
+                                                   manually clear clipboard. This
+                                                   is acceptable — clipboard was
+                                                   not corrupted, just not restored.
+
+
+12. UI / UX SPECIFICATION
+──────────────────────────
+
+12.1  Floating Pill
+
+  Size:             320px wide × 52px tall (resizes for longer error messages)
+  Position:         Bottom-center of primary monitor, 40px from bottom edge
+  Corners:          26px border radius (full pill shape)
+  Background:       #1A1A1A at 85% opacity
+  Font:             System UI / Segoe UI, 13px, white (#FFFFFF)
+  Window flags:     Qt.WindowStaysOnTopHint | Qt.FramelessWindowHint
+                    | Qt.Tool | Qt.WindowTransparentForInput (when DONE/ERROR)
+
+  RECORDING state layout:
+    [●] [▁▃▇▅▂▄▆] [0:07]
+    Red dot (8px) + animated 5-bar waveform + right-aligned duration counter
+
+  Waveform animation:
+    5 vertical bars, each 4px wide, 2px gap.
+    Bar height = amplitude × 28px (max 28px, min 3px).
+    Updates every 33ms (30fps) from audio_level_update signal.
+    Bars are white (#FFFFFF).
+
+  TRANSCRIBING state layout:
+    [◌] Transcribing...
+    Rotating 16px spinner (CSS-style animation) + label.
+
+  DONE state layout:
+    [✓]
+    Green checkmark (#4CAF50), 20px. Pill fades out over 600ms.
+
+  ERROR state layout:
+    [✗] No mic detected
+    Red X (#F44336) + message. Pill fades out over 2000ms.
+
+  Drag behavior:
+    Pill is draggable by clicking and dragging anywhere on its surface.
+    On drag release, new position saved to config.json immediately.
+
+12.2  Settings Window
+
+  Style: Native Windows controls. No custom styling.
+  Width: 380px fixed.
+  Layout: two-column label/control rows.
+  Always on top of other windows when open.
+
+12.3  Tray Icon
+
+  Size: 16×16px PNG for each state (idle, recording, error).
+  Idle: grey microphone silhouette.
+  Recording: red microphone silhouette.
+  Error: yellow triangle with exclamation.
+
+
+13. CONFIGURATION SCHEMA
+─────────────────────────
+
+File: config.json (lives in same directory as the executable)
+
+{
+  "hotkey": "right alt",
+  "model": "small",
+  "language": "",
+  "paste_method": "clipboard",
+  "trailing_space": true,
+  "startup_with_windows": false,
+  "pill_position": [null, null],
+  "log_level": "WARNING"
+}
+
+Field notes:
+  hotkey          String as returned by keyboard.read_key(). Examples:
+                  "right alt", "f13", "ctrl+shift+space"
+  model           One of: "tiny" | "base" | "small" | "medium"
+  language        ISO 639-1 code ("en", "fr") or "" for auto-detect
+  paste_method    "clipboard" | "typewrite"
+  pill_position   [x, y] pixel coords of pill top-left, or [null, null]
+                  for default bottom-center
+  log_level       "DEBUG" | "INFO" | "WARNING" | "ERROR"
+
+Log file: pressflow.log, same directory as executable.
+Max size: 5MB. Rotate once (pressflow.log.1). No further rotation needed.
+
+
+14. BUILD & DISTRIBUTION
+─────────────────────────
+
+14.1  Development
+  python -m venv .venv
+  .venv\Scripts\activate
+  pip install -r requirements.txt
+  python main.py
+
+14.2  Packaging (PyInstaller)
+  pyinstaller --onefile --noconsole --icon=assets/icon_idle.ico \
+              --add-data "assets;assets" \
+              --name PressFlow main.py
+
+  --noconsole hides the terminal window.
+  --add-data bundles the assets/ directory into the exe.
+
+  Output: dist/PressFlow.exe (single file, ~80MB with model excluded).
+  Model downloads separately on first run (~250MB for small).
+  Ship a README explaining the one-time download.
+
+14.3  Administrator requirement
+  keyboard library requires elevated privileges on Windows for global hotkey
+  interception in all applications. Two options:
+    Option A: Ship with a manifest that requests UAC elevation on launch.
+    Option B: Run without elevation — works everywhere except UAC-elevated apps.
+  Recommendation: Option B for v1. Document the limitation. Address in v2 with
+  a Windows service approach (runs as SYSTEM, no UAC prompt).
+
+
+15. TESTING REQUIREMENTS
+─────────────────────────
+
+T-01  Unit: Recorder
+      Inject synthetic audio (numpy sine wave).
+      Assert output dtype float32, sample_rate 16000.
+      Assert discard behavior for clips < 300ms.
+
+T-02  Unit: Transcriber
+      Feed known audio clip (English phrase with known ground truth).
+      Assert transcription accuracy ≥ 90% WER on ground truth.
+      Assert transcription completes in ≤ 2.0s on test machine.
+
+T-03  Unit: Paster
+      Mock pyperclip and pyautogui.
+      Assert clipboard is saved before paste.
+      Assert clipboard is restored after 500ms.
+      Assert trailing space appended when config = true.
+
+T-04  Unit: Config
+      Write config with all fields.
+      Delete one field.
+      Load — assert missing field defaults to expected value, no crash.
+      Write corrupt JSON — assert app regenerates defaults, no crash.
+
+T-05  Integration: Full flow
+      Simulate keydown → 3s of audio → keyup.
+      Assert pill state transitions: IDLE → RECORDING → TRANSCRIBING → DONE.
+      Assert text appears in clipboard at end.
+
+T-06  Manual: Cross-app paste
+      Verify paste works in: Chrome, VS Code, Notepad, Upwork browser tab.
+      Verify paste works when previous clipboard contains: empty, text, image.
+      Verify Ctrl+Z undoes the paste in: Chrome text field, VS Code.
+
+
+16. BUILD ORDER (MILESTONE PLAN)
+──────────────────────────────────
+
+Milestone 1 — Core loop (no UI)
+  recorder.py + transcriber.py + paster.py + main.py (terminal only)
+  Acceptance: hold hotkey → speak → release → text pasted in Notepad.
+  No tray. No pill. Terminal prints state.
+
+Milestone 2 — Floating pill
+  pill.py + StateEmitter integration
+  Acceptance: pill appears on recording start, animates waveform, transitions
+  through all states correctly, disappears after done/error.
+
+Milestone 3 — System tray
+  tray.py integration
+  Acceptance: app starts with no window, tray icon shows, right-click menu works,
+  Quit exits cleanly.
+
+Milestone 4 — Settings panel
+  settings.py + config.py persistence
+  Acceptance: hotkey change takes effect immediately, position persists after drag,
+  all fields save and reload correctly.
+
+Milestone 5 — Packaging & hardening
+  Error handling matrix fully implemented.
+  PyInstaller build.
+  README with administrator note and model download explanation.
+  Acceptance: EXE runs on a clean Windows machine with no Python installed.
+
+
+================================================================================
+END OF DOCUMENT
+================================================================================

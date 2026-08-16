@@ -1537,6 +1537,232 @@ async def render_project_hephzibah_os(out_dir: Path):
         await t
 
 
+# ── HephFlow ──────────────────────────────────────────────────────────────────
+
+async def _render_synthetic_png(html_content: str, width: int, height: int) -> str:
+    """Render an HTML string to PNG and return as a base64 data URI."""
+    tmp = Path(__file__).parent.parent / "outputs" / "assets" / "_hf_tmp_synth.html"
+    tmp.write_text(html_content, encoding="utf-8")
+    try:
+        async with async_playwright() as pw:
+            browser = await pw.chromium.launch()
+            page = await browser.new_page(
+                viewport={"width": width, "height": height},
+                device_scale_factor=2,
+            )
+            await page.goto(f"file:///{tmp.resolve().as_posix()}")
+            await page.wait_for_load_state("domcontentloaded")
+            await page.wait_for_timeout(600)
+            png_bytes = await page.screenshot(full_page=False)
+            await browser.close()
+        return "data:image/png;base64," + base64.b64encode(png_bytes).decode()
+    finally:
+        tmp.unlink(missing_ok=True)
+
+
+async def render_project_hephflow(out_dir: Path):
+    """HephFlow -- Offline Push-to-Talk Voice Dictation Tool for Windows"""
+    project = "hephflow"
+    PC = "#E84040"  # red -- the recording dot, the app's core visual signal
+
+    # ── Synthetic source images ───────────────────────────────────────────────
+
+    CODE_HTML = """<!DOCTYPE html><html><head><meta charset="UTF-8">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { width:700px; height:880px; background:#1E1E2E; font-family:'JetBrains Mono','Consolas',monospace; font-size:13.5px; overflow:hidden; }
+.bar { height:36px; background:#181825; display:flex; align-items:center; padding:0 14px; gap:8px; border-bottom:1px solid #313244; }
+.dot { width:12px; height:12px; border-radius:50%; flex-shrink:0; }
+.tab { color:#CDD6F4; padding:7px 18px; font-size:12px; border-top:2px solid #E84040; background:#1E1E2E; margin-left:16px; }
+.crumb { font-size:11px; color:#6C7086; padding:5px 20px; border-bottom:1px solid #313244; }
+.code { padding:10px 0; line-height:1.85; }
+.ln-row { display:flex; padding:0 8px 0 4px; }
+.ln { color:#45475A; width:38px; text-align:right; margin-right:22px; flex-shrink:0; font-size:12px; }
+.k{color:#CBA6F7} .f{color:#89B4FA} .s{color:#A6E3A1} .c{color:#6C7086}
+.v{color:#CDD6F4} .m{color:#FAB387} .p{color:#F5C2E7} .n{color:#F38BA8}
+.bl { height:24.9px; }
+</style></head><body>
+<div class="bar">
+  <div class="dot" style="background:#F38BA8"></div>
+  <div class="dot" style="background:#F9E2AF"></div>
+  <div class="dot" style="background:#A6E3A1"></div>
+  <div class="tab">hephflow.py</div>
+</div>
+<div class="crumb">src &gt; hephflow &gt; hephflow.py &nbsp; &nbsp; Python</div>
+<div class="code">
+<div class="ln-row"><span class="ln">1</span><span class="k">import</span> <span class="m">whisper</span></div>
+<div class="ln-row"><span class="ln">2</span><span class="k">import</span> <span class="m">pyaudio</span></div>
+<div class="ln-row"><span class="ln">3</span><span class="k">import</span> <span class="m">numpy</span> <span class="k">as</span> <span class="n">np</span></div>
+<div class="ln-row"><span class="ln">4</span><span class="k">import</span> <span class="m">pyperclip</span></div>
+<div class="ln-row"><span class="ln">5</span><span class="k">from</span> <span class="m">pynput</span> <span class="k">import</span> <span class="n">keyboard</span></div>
+<div class="bl"></div>
+<div class="ln-row"><span class="ln">7</span><span class="c"># Loaded once at startup &mdash; stays resident</span></div>
+<div class="ln-row"><span class="ln">8</span><span class="v">model</span> <span class="v">=</span> <span class="m">whisper</span><span class="v">.</span><span class="f">load_model</span><span class="v">(</span><span class="s">"base.en"</span><span class="v">)</span></div>
+<div class="bl"></div>
+<div class="ln-row"><span class="ln">10</span><span class="v">recording</span> <span class="v">=</span> <span class="k">False</span></div>
+<div class="ln-row"><span class="ln">11</span><span class="v">audio_buffer</span> <span class="v">= []</span></div>
+<div class="bl"></div>
+<div class="ln-row"><span class="ln">13</span><span class="k">def</span> <span class="f">on_key_press</span><span class="v">(</span><span class="p">key</span><span class="v">):</span></div>
+<div class="ln-row"><span class="ln">14</span><span class="v">&nbsp;&nbsp;&nbsp;&nbsp;</span><span class="k">global</span> <span class="v">recording, audio_buffer</span></div>
+<div class="ln-row"><span class="ln">15</span><span class="v">&nbsp;&nbsp;&nbsp;&nbsp;</span><span class="k">if</span> <span class="v">key</span> <span class="v">==</span> <span class="n">HOTKEY</span> <span class="k">and not</span> <span class="v">recording:</span></div>
+<div class="ln-row"><span class="ln">16</span><span class="v">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;recording</span> <span class="v">=</span> <span class="k">True</span></div>
+<div class="ln-row"><span class="ln">17</span><span class="v">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;audio_buffer</span> <span class="v">= []</span></div>
+<div class="ln-row"><span class="ln">18</span><span class="v">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;pill</span><span class="v">.</span><span class="f">show</span><span class="v">(state</span><span class="v">=</span><span class="s">"recording"</span><span class="v">)</span></div>
+<div class="bl"></div>
+<div class="ln-row"><span class="ln">20</span><span class="k">def</span> <span class="f">on_key_release</span><span class="v">(</span><span class="p">key</span><span class="v">):</span></div>
+<div class="ln-row"><span class="ln">21</span><span class="v">&nbsp;&nbsp;&nbsp;&nbsp;</span><span class="k">global</span> <span class="v">recording</span></div>
+<div class="ln-row"><span class="ln">22</span><span class="v">&nbsp;&nbsp;&nbsp;&nbsp;</span><span class="k">if</span> <span class="v">key</span> <span class="v">==</span> <span class="n">HOTKEY</span> <span class="k">and</span> <span class="v">recording:</span></div>
+<div class="ln-row"><span class="ln">23</span><span class="v">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;recording</span> <span class="v">=</span> <span class="k">False</span></div>
+<div class="ln-row"><span class="ln">24</span><span class="v">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;pill</span><span class="v">.</span><span class="f">show</span><span class="v">(state</span><span class="v">=</span><span class="s">"transcribing"</span><span class="v">)</span></div>
+<div class="bl"></div>
+<div class="ln-row"><span class="ln">26</span><span class="v">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;audio</span> <span class="v">=</span> <span class="m">np</span><span class="v">.</span><span class="f">frombuffer</span><span class="v">(</span></div>
+<div class="ln-row"><span class="ln">27</span><span class="v">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span class="s">b""</span><span class="v">.</span><span class="f">join</span><span class="v">(audio_buffer),</span></div>
+<div class="ln-row"><span class="ln">28</span><span class="v">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;dtype</span><span class="v">=</span><span class="m">np</span><span class="v">.float32</span></div>
+<div class="ln-row"><span class="ln">29</span><span class="v">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;)</span></div>
+<div class="ln-row"><span class="ln">30</span><span class="v">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;result</span> <span class="v">=</span> <span class="v">model</span><span class="v">.</span><span class="f">transcribe</span><span class="v">(audio)</span></div>
+<div class="ln-row"><span class="ln">31</span><span class="v">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;pyperclip</span><span class="v">.</span><span class="f">copy</span><span class="v">(result[</span><span class="s">"text"</span><span class="v">])</span></div>
+<div class="ln-row"><span class="ln">32</span><span class="v">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;keyboard</span><span class="v">.</span><span class="f">press_and_release</span><span class="v">(</span><span class="s">"ctrl+v"</span><span class="v">)</span></div>
+<div class="ln-row"><span class="ln">33</span><span class="v">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;pill</span><span class="v">.</span><span class="f">hide</span><span class="v">()</span></div>
+</div>
+</body></html>"""
+
+    PILL_HTML = """<!DOCTYPE html><html><head><meta charset="UTF-8">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+body { width:660px; height:840px; background:#1E1E2E; position:relative; overflow:hidden;
+       font-family:'JetBrains Mono','Consolas',monospace; }
+.bg { position:absolute; inset:0; padding:46px 28px; font-size:12px; line-height:1.9;
+      color:rgba(205,214,244,0.17); overflow:hidden; }
+.pill { position:absolute; bottom:96px; left:50%; transform:translateX(-50%);
+        display:flex; align-items:center; gap:9px; padding:0 16px 0 12px; height:34px;
+        background:rgba(14,14,24,0.97);
+        border:1px solid rgba(232,64,64,0.55); border-radius:50px;
+        box-shadow:0 0 0 1px rgba(232,64,64,0.18),0 10px 40px rgba(0,0,0,0.8),0 0 32px rgba(232,64,64,0.18);
+        white-space:nowrap; }
+.dot { width:9px; height:9px; border-radius:50%; background:#E84040;
+       box-shadow:0 0 8px rgba(232,64,64,0.7); }
+.wav { display:flex; align-items:center; gap:3px; }
+.b { width:2.5px; border-radius:2px; background:rgba(232,64,64,0.6); }
+.tm { font-size:12px; font-weight:500; color:rgba(255,255,255,0.55); letter-spacing:0.06em; }
+</style></head><body>
+<div class="bg">
+import whisper<br>import pyaudio, numpy as np<br>import pyperclip<br>
+from pynput import keyboard<br><br>
+model = whisper.load_model("base.en")<br><br>
+def on_key_press(key):<br>
+&nbsp;&nbsp;global recording<br>
+&nbsp;&nbsp;if key == HOTKEY and not recording:<br>
+&nbsp;&nbsp;&nbsp;&nbsp;recording = True<br>
+&nbsp;&nbsp;&nbsp;&nbsp;pill.show(state="recording")<br><br>
+def on_key_release(key):<br>
+&nbsp;&nbsp;if key == HOTKEY and recording:<br>
+&nbsp;&nbsp;&nbsp;&nbsp;recording = False<br>
+&nbsp;&nbsp;&nbsp;&nbsp;audio = np.frombuffer(b"".join(buffer), dtype=np.float32)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;result = model.transcribe(audio)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;pyperclip.copy(result["text"])<br>
+&nbsp;&nbsp;&nbsp;&nbsp;keyboard.press_and_release("ctrl+v")<br>
+&nbsp;&nbsp;&nbsp;&nbsp;pill.hide()
+</div>
+<div class="pill">
+    <div class="dot"></div>
+    <div class="wav">
+        <div class="b" style="height:4px"></div><div class="b" style="height:11px"></div>
+        <div class="b" style="height:6px"></div><div class="b" style="height:15px"></div>
+        <div class="b" style="height:5px"></div><div class="b" style="height:11px"></div>
+        <div class="b" style="height:7px"></div><div class="b" style="height:13px"></div>
+        <div class="b" style="height:4px"></div>
+    </div>
+    <div class="tm">0:08</div>
+</div>
+</body></html>"""
+
+    print("  [hephflow] Generating synthetic source images...")
+    img_code = await _render_synthetic_png(CODE_HTML, 700, 880)
+    img_pill = await _render_synthetic_png(PILL_HTML, 660, 840)
+    print("  [hephflow] Source images ready.")
+
+    # ── Slide 1 — Hero ────────────────────────────────────────────────────────
+
+    html1 = slide_hero(
+        eyebrow="Voice Dictation Tool &middot; Windows &middot; Python &middot; Whisper",
+        stats=[
+            ("0",       "API calls required &middot; fully offline",         False),
+            ("Whisper", "On-device speech-to-text engine",                   True),
+            ("Push",    "To talk &middot; release to paste anywhere",        False),
+        ],
+        tagline_html=(
+            "<b>Offline voice dictation for any Windows app.</b><br>"
+            "Hold hotkey. Speak. Release. Text pasted instantly.<br>"
+            "No internet. No API key. No window switching."
+        ),
+        img_a_b64=img_code,
+        img_b_b64=img_pill,
+        accent_label="Stack",
+        accent_val="Python &middot; Whisper &middot; Windows API",
+        accent_sub="Fully offline &nbsp;&middot;&nbsp; 0 cloud calls &nbsp;&middot;&nbsp; CPU-only inference",
+        img_a_rot="-7deg",
+        img_b_rot="4deg",
+        img_a_filter="brightness(0.68) saturate(0.55)",
+        img_b_filter="brightness(0.90) saturate(0.85)",
+        product_color=PC,
+    )
+
+    # ── Slide 2 — Architecture ────────────────────────────────────────────────
+
+    phases = [
+        ("01", "Global Hotkey Hook",    "Win+Alt+H captured by pynput listener. Pill appears immediately. PyAudio stream opens at 16kHz mono."),
+        ("02", "Local Audio Capture",   "Float32 audio chunks streamed to in-memory buffer. No disk writes. Recording ends on key release."),
+        ("03", "Whisper Transcription", "openai-whisper base.en runs CPU-only inference locally. 74M params. Result in under 3 seconds."),
+        ("04", "Clipboard Paste",       "Text copied via pyperclip. Ctrl+V fired programmatically. Active cursor position unchanged. Pill hides."),
+    ]
+    arch_card_html = f"""
+        <div style="padding:0 4px;">
+            <div style="font-family:'JetBrains Mono',monospace;font-size:7.5px;letter-spacing:0.20em;text-transform:uppercase;color:{PC};margin-bottom:14px;">How it works</div>
+            <div style="font-family:'Poppins',sans-serif;font-size:22px;font-weight:800;color:{WHITE};letter-spacing:-0.03em;line-height:1.15;">Speak once.<br>Type never.</div>
+            <div style="font-family:'Inter',sans-serif;font-size:10px;font-weight:300;color:{DIM};margin-top:14px;line-height:1.65;">
+                Hold Win+Alt+H. Speak naturally.<br>
+                Release the key. Text appears at cursor.<br>
+                No window focus change. No cloud latency.
+            </div>
+        </div>"""
+
+    html2 = slide_arch(
+        eyebrow="HephFlow &middot; How it works",
+        title="Speak once.\nType never.",
+        subtitle="HephFlow captures voice on key hold, transcribes locally with Whisper, and pastes directly into the active cursor position. Zero cloud calls. Works in any app.",
+        phases=phases,
+        tools=["Python", "OpenAI Whisper", "PyAudio", "pynput", "pyperclip", "Tkinter"],
+        img_a_b64=img_code,
+        img_b_content=arch_card_html,
+        product_color=PC,
+    )
+
+    # ── Slide 3 — System Design ───────────────────────────────────────────────
+
+    html3 = slide_proof(
+        eyebrow="HephFlow &middot; System design",
+        hero_num="3",
+        hero_label="Pill states. Zero API calls. Instant paste.",
+        proofs=[
+            ("Engine",   "Whisper base.en",   "74M params · English · CPU inference · no GPU · no API key · ships with model file",    False),
+            ("Capture",  "PyAudio Stream",     "16kHz mono · float32 · key-gated buffer · stops on release · no disk writes",           False),
+            ("Trigger",  "Win+Alt+H",          "Global hotkey via pynput · works in any focused app · no window switch required",       True),
+            ("Output",   "Clipboard Paste",    "pyperclip.copy() + programmatic Ctrl+V · cursor stays in original position",            False),
+        ],
+        product_color=PC,
+    )
+
+    for coro in [
+        render_slide(html1, project, 1, out_dir),
+        render_slide(html2, project, 2, out_dir),
+        render_slide(html3, project, 3, out_dir),
+    ]:
+        await coro
+
+
 # ── Main ──────────────────────────────────────────────────────────────────────
 
 ALL_PROJECTS = {
@@ -1549,6 +1775,7 @@ ALL_PROJECTS = {
     "kairos":               render_project_kairos,
     "yct-exam-nav":         render_project_yct_exam_nav,
     "hephzibah-os":         render_project_hephzibah_os,
+    "hephflow":             render_project_hephflow,
 }
 
 

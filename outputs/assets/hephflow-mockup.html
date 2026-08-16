@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>HephFlow — UI Mockup</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: #111;
+    font-family: -apple-system, 'Segoe UI', sans-serif;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0;
+  }
+
+  /* ── Desktop scene wrapper ─────────────────────────── */
+  .scene {
+    width: 900px;
+    height: 540px;
+    position: relative;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-bottom: 1px solid #1a1a1a;
+  }
+
+  /* Windows-like desktop wallpaper */
+  .scene-bg {
+    position: absolute;
+    inset: 0;
+    background:
+      radial-gradient(ellipse at 30% 60%, rgba(20,30,60,0.9) 0%, transparent 60%),
+      radial-gradient(ellipse at 80% 20%, rgba(10,20,40,0.7) 0%, transparent 50%),
+      linear-gradient(135deg, #0a0e1a 0%, #0d1220 40%, #080c18 100%);
+  }
+
+  /* Simulated open window behind pill */
+  .fake-window {
+    position: absolute;
+    border-radius: 8px;
+    border: 1px solid rgba(255,255,255,0.06);
+    background: rgba(255,255,255,0.03);
+    backdrop-filter: blur(2px);
+  }
+
+  .fake-window.editor {
+    width: 560px;
+    height: 340px;
+    top: 60px;
+    left: 100px;
+    background: rgba(30,30,35,0.85);
+  }
+
+  .fake-window .titlebar {
+    height: 30px;
+    background: rgba(255,255,255,0.05);
+    border-radius: 8px 8px 0 0;
+    display: flex;
+    align-items: center;
+    padding: 0 10px;
+    gap: 6px;
+  }
+  .dot { width: 10px; height: 10px; border-radius: 50%; }
+  .dot.r { background: #ff5f57; }
+  .dot.y { background: #febc2e; }
+  .dot.g { background: #28c840; }
+
+  .fake-text-area {
+    padding: 14px 16px;
+    font-size: 11px;
+    color: rgba(255,255,255,0.2);
+    line-height: 1.8;
+    font-family: 'Courier New', monospace;
+  }
+
+  .fake-text-area .typed {
+    color: rgba(255,255,255,0.55);
+  }
+
+  /* Windows taskbar */
+  .taskbar {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 40px;
+    background: rgba(10,10,15,0.9);
+    border-top: 1px solid rgba(255,255,255,0.05);
+    display: flex;
+    align-items: center;
+    padding: 0 16px;
+    gap: 8px;
+  }
+
+  .taskbar-icon {
+    width: 28px;
+    height: 28px;
+    border-radius: 6px;
+    background: rgba(255,255,255,0.07);
+  }
+
+  /* ── THE PILL ─────────────────────────────────────── */
+  .pill-wrap {
+    position: relative;
+    z-index: 10;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .pill {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 0 22px 0 18px;
+    height: 58px;
+    border-radius: 50px;
+    background: rgba(18, 18, 22, 0.96);
+    border: 1px solid rgba(255,255,255,0.12);
+    box-shadow:
+      0 8px 32px rgba(0,0,0,0.6),
+      0 2px 8px rgba(0,0,0,0.4),
+      inset 0 1px 0 rgba(255,255,255,0.07);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    min-width: 260px;
+  }
+
+  .pill-brand {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    color: rgba(255,255,255,0.35);
+    text-transform: uppercase;
+  }
+
+  .pill-divider {
+    width: 1px;
+    height: 24px;
+    background: rgba(255,255,255,0.08);
+  }
+
+  .mic-btn {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    flex-shrink: 0;
+  }
+
+  .pill-status {
+    font-size: 12px;
+    font-weight: 500;
+    letter-spacing: 0.02em;
+    flex: 1;
+  }
+
+  .pill-shortcut {
+    font-size: 10px;
+    color: rgba(255,255,255,0.2);
+    background: rgba(255,255,255,0.06);
+    padding: 3px 7px;
+    border-radius: 4px;
+    font-family: 'Courier New', monospace;
+  }
+
+  /* ── STATE 1: IDLE ────────────────────────────────── */
+  .state-idle .pill {
+    border-color: rgba(255,255,255,0.10);
+  }
+  .state-idle .mic-btn {
+    background: rgba(255,255,255,0.06);
+  }
+  .state-idle .mic-icon { color: rgba(255,255,255,0.4); }
+  .state-idle .pill-status { color: rgba(255,255,255,0.3); }
+
+  /* ── STATE 2: RECORDING ───────────────────────────── */
+  .state-recording .pill {
+    border-color: rgba(255, 68, 68, 0.5);
+    box-shadow:
+      0 8px 32px rgba(0,0,0,0.6),
+      0 0 0 1px rgba(255,68,68,0.2),
+      0 0 24px rgba(255,68,68,0.15),
+      inset 0 1px 0 rgba(255,255,255,0.07);
+  }
+  .state-recording .mic-btn {
+    background: rgba(255, 68, 68, 0.15);
+  }
+  .state-recording .mic-icon { color: #ff4444; }
+  .state-recording .pill-status { color: rgba(255,255,255,0.85); }
+  .state-recording .pill-brand { color: rgba(255,68,68,0.6); }
+
+  /* waveform bars */
+  .waveform {
+    display: flex;
+    align-items: center;
+    gap: 3px;
+    height: 20px;
+  }
+  .bar {
+    width: 3px;
+    border-radius: 2px;
+    background: #ff4444;
+    animation: wave 0.8s ease-in-out infinite;
+    opacity: 0.8;
+  }
+  .bar:nth-child(1) { height: 6px;  animation-delay: 0s; }
+  .bar:nth-child(2) { height: 14px; animation-delay: 0.1s; }
+  .bar:nth-child(3) { height: 10px; animation-delay: 0.2s; }
+  .bar:nth-child(4) { height: 18px; animation-delay: 0.15s; }
+  .bar:nth-child(5) { height: 8px;  animation-delay: 0.05s; }
+  .bar:nth-child(6) { height: 12px; animation-delay: 0.25s; }
+  .bar:nth-child(7) { height: 6px;  animation-delay: 0.1s; }
+
+  @keyframes wave {
+    0%, 100% { transform: scaleY(1); }
+    50% { transform: scaleY(1.8); }
+  }
+
+  /* pulse ring */
+  .pulse-ring {
+    position: absolute;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    border: 1.5px solid rgba(255,68,68,0.5);
+    animation: pulse-out 1.4s ease-out infinite;
+  }
+  @keyframes pulse-out {
+    0%   { transform: scale(1); opacity: 0.7; }
+    100% { transform: scale(2.2); opacity: 0; }
+  }
+
+  /* ── STATE 3: DONE ────────────────────────────────── */
+  .state-done .pill {
+    border-color: rgba(68, 220, 140, 0.4);
+    box-shadow:
+      0 8px 32px rgba(0,0,0,0.6),
+      0 0 20px rgba(68,220,140,0.1),
+      inset 0 1px 0 rgba(255,255,255,0.07);
+  }
+  .state-done .mic-btn {
+    background: rgba(68, 220, 140, 0.1);
+  }
+  .state-done .mic-icon { color: #44dc8c; }
+  .state-done .pill-status { color: rgba(255,255,255,0.75); }
+  .state-done .pill-brand { color: rgba(68,220,140,0.5); }
+
+  /* pasted text highlight in editor */
+  .pasted-text {
+    display: inline;
+    background: rgba(68,220,140,0.12);
+    color: rgba(255,255,255,0.8) !important;
+    border-radius: 2px;
+    padding: 0 2px;
+  }
+
+  /* ── Scene labels ─────────────────────────────────── */
+  .scene-label {
+    position: absolute;
+    top: 16px;
+    left: 20px;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: rgba(255,255,255,0.15);
+  }
+
+  svg { display: block; }
+</style>
+</head>
+<body>
+
+<!-- ═══════════════════════════════════════════════════
+     SCENE 1 — IDLE
+════════════════════════════════════════════════════ -->
+<div class="scene state-idle">
+  <div class="scene-bg"></div>
+  <span class="scene-label">State 1 — Idle</span>
+
+  <div class="fake-window editor">
+    <div class="titlebar">
+      <div class="dot r"></div><div class="dot y"></div><div class="dot g"></div>
+    </div>
+    <div class="fake-text-area">
+      <span style="color:rgba(255,255,255,0.12)">// meeting-notes.txt</span><br><br>
+      Action items from this morning's call...<br>
+      Follow up with design team on...<br>
+      <span style="color:rgba(255,255,255,0.08)">|</span>
+    </div>
+  </div>
+
+  <div class="pill-wrap" style="position:absolute; bottom: 68px;">
+    <div class="pill">
+      <span class="pill-brand">HephFlow</span>
+      <div class="pill-divider"></div>
+      <div class="mic-btn">
+        <svg class="mic-icon" width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M12 14a3 3 0 0 0 3-3V5a3 3 0 0 0-6 0v6a3 3 0 0 0 3 3zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 14 0h-2zm-5 9v-2.07A8 8 0 0 0 19.93 11H18a6 6 0 0 1-12 0H4.07A8 8 0 0 0 11 19.93V22h2v-2z"/>
+        </svg>
+      </div>
+      <span class="pill-status">Ready</span>
+      <span class="pill-shortcut">Win+Alt+H</span>
+    </div>
+  </div>
+
+  <div class="taskbar">
+    <div class="taskbar-icon"></div>
+    <div class="taskbar-icon"></div>
+    <div class="taskbar-icon"></div>
+  </div>
+</div>
+
+
+<!-- ═══════════════════════════════════════════════════
+     SCENE 2 — RECORDING
+════════════════════════════════════════════════════ -->
+<div class="scene state-recording">
+  <div class="scene-bg" style="background: radial-gradient(ellipse at 30% 60%, rgba(40,10,10,0.9) 0%, transparent 60%), radial-gradient(ellipse at 80% 20%, rgba(20,8,8,0.7) 0%, transparent 50%), linear-gradient(135deg, #0e0a0a 0%, #150d0d 40%, #0a0808 100%);"></div>
+  <span class="scene-label">State 2 — Recording</span>
+
+  <div class="fake-window editor">
+    <div class="titlebar">
+      <div class="dot r"></div><div class="dot y"></div><div class="dot g"></div>
+    </div>
+    <div class="fake-text-area">
+      <span style="color:rgba(255,255,255,0.12)">// meeting-notes.txt</span><br><br>
+      Action items from this morning's call...<br>
+      Follow up with design team on...<br>
+      <span style="color:rgba(255,255,255,0.08)">|</span>
+    </div>
+  </div>
+
+  <div class="pill-wrap" style="position:absolute; bottom: 68px;">
+    <div class="pill">
+      <span class="pill-brand">HephFlow</span>
+      <div class="pill-divider"></div>
+      <div class="mic-btn" style="position:relative;">
+        <div class="pulse-ring"></div>
+        <svg class="mic-icon" width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M12 14a3 3 0 0 0 3-3V5a3 3 0 0 0-6 0v6a3 3 0 0 0 3 3zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 14 0h-2zm-5 9v-2.07A8 8 0 0 0 19.93 11H18a6 6 0 0 1-12 0H4.07A8 8 0 0 0 11 19.93V22h2v-2z"/>
+        </svg>
+      </div>
+      <div class="waveform">
+        <div class="bar"></div><div class="bar"></div><div class="bar"></div>
+        <div class="bar"></div><div class="bar"></div><div class="bar"></div>
+        <div class="bar"></div>
+      </div>
+      <span class="pill-status" style="color:#ff6666; font-size:11px;">Listening...</span>
+    </div>
+  </div>
+
+  <div class="taskbar">
+    <div class="taskbar-icon"></div>
+    <div class="taskbar-icon"></div>
+    <div class="taskbar-icon"></div>
+  </div>
+</div>
+
+
+<!-- ═══════════════════════════════════════════════════
+     SCENE 3 — PASTED
+════════════════════════════════════════════════════ -->
+<div class="scene state-done">
+  <div class="scene-bg" style="background: radial-gradient(ellipse at 30% 60%, rgba(10,30,20,0.9) 0%, transparent 60%), radial-gradient(ellipse at 80% 20%, rgba(8,20,14,0.7) 0%, transparent 50%), linear-gradient(135deg, #080e0b 0%, #0d1510 40%, #080c0a 100%);"></div>
+  <span class="scene-label">State 3 — Pasted</span>
+
+  <div class="fake-window editor">
+    <div class="titlebar">
+      <div class="dot r"></div><div class="dot y"></div><div class="dot g"></div>
+    </div>
+    <div class="fake-text-area">
+      <span style="color:rgba(255,255,255,0.12)">// meeting-notes.txt</span><br><br>
+      Action items from this morning's call...<br>
+      Follow up with design team on...<br>
+      <span class="pasted-text">Send the updated scope to the client by Thursday and confirm the revised timeline before the next sprint.</span>
+    </div>
+  </div>
+
+  <div class="pill-wrap" style="position:absolute; bottom: 68px;">
+    <div class="pill">
+      <span class="pill-brand">HephFlow</span>
+      <div class="pill-divider"></div>
+      <div class="mic-btn">
+        <svg class="mic-icon" width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M9 16.2L4.8 12l-1.4 1.4L9 19 21 7l-1.4-1.4L9 16.2z"/>
+        </svg>
+      </div>
+      <span class="pill-status">Pasted</span>
+      <span class="pill-shortcut" style="color:rgba(68,220,140,0.5); background:rgba(68,220,140,0.08);">Done</span>
+    </div>
+  </div>
+
+  <div class="taskbar">
+    <div class="taskbar-icon"></div>
+    <div class="taskbar-icon"></div>
+    <div class="taskbar-icon"></div>
+  </div>
+</div>
+
+</body>
+</html>
